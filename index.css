@@ -1,0 +1,74 @@
+/* index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Light Mode - White, Blue, Green Border Theme */
+  --bg-primary: #FFFFFF;
+  /* Pure White Main BG */
+  --bg-secondary: #F0F9FF;
+  /* Very light blue tint for secondary areas */
+  --bg-panel: rgba(255, 255, 255, 0.95);
+
+  --text-primary: #0f172a;
+  /* Slate 900 */
+  --text-secondary: #334155;
+  /* Slate 700 */
+  --text-muted: #64748b;
+  /* Slate 500 */
+
+  --color-primary: #2563EB;
+  /* Royal Blue */
+  --color-secondary: #10B981;
+  /* Emerald Green */
+  --color-accent: #0EA5E9;
+  /* Sky Blue */
+
+  /* Distinct Green/Blue Borders as requested */
+  --border-color: #cbd5e1;
+  /* Slate 300 base border */
+  --border-focus: #10B981;
+  /* Green focus border */
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(37, 99, 235, 0.1), 0 2px 4px -2px rgba(37, 99, 235, 0.06);
+  /* Blue-tinted shadow */
+  --shadow-lg: 0 10px 15px -3px rgba(37, 99, 235, 0.1), 0 4px 6px -4px rgba(37, 99, 235, 0.05);
+}
+
+.dark {
+  /* Dark Mode - Deep Blue/Green */
+  --bg-primary: #020617;
+  /* Slate 950 */
+  --bg-secondary: #0F172A;
+  /* Slate 900 */
+  --bg-panel: rgba(15, 23, 42, 0.6);
+
+  --text-primary: #F8FAFC;
+  /* Slate 50 */
+  --text-secondary: #94A3B8;
+  /* Slate 400 */
+
+  --color-primary: #38BDF8;
+  /* Sky 400 */
+  --color-secondary: #34D399;
+  /* Emerald 400 */
+  --color-accent: #0EA5E9;
+
+  --border-color: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Glass Utilities */
+.glass-panel {
+  background: var(--bg-panel);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+}

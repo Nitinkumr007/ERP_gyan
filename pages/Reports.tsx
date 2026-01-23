@@ -1,7 +1,13 @@
 
 import React, { useState } from 'react';
+import DatePicker from '../components/DatePicker';
 import { supabase } from '../supabaseClient';
 import { utils, writeFile } from 'xlsx';
+import { UserAccessMaster, UserMenuPermissions } from '../types';
+
+interface ReportsProps {
+    currentUser: UserAccessMaster | null;
+}
 
 interface ReportRequest {
     id: string;
@@ -15,7 +21,104 @@ interface ReportRequest {
     requestedAt: Date;
 }
 
-const Reports: React.FC = () => {
+// Static Report Definitions
+const reportsList = [
+    // Transactional (Supports Date)
+    {
+        id: 'demand_log',
+        category: 'Operational',
+        title: 'Demand Log',
+        desc: 'Daily order logging & dispatch tracking.',
+        table: 'demand_dispatch_master',
+        file: 'Demand_Report',
+        supportsDate: true,
+        icon: 'receipt_long',
+        color: 'text-blue-500',
+        bg: 'bg-blue-500/10',
+        permissionKey: 'access_report_demand_log'
+    },
+    {
+        id: 'custom_pending',
+        category: 'Operational',
+        title: 'Pending Orders',
+        desc: 'Unpaid or undispatched order queue.',
+        table: null,
+        file: 'Pending_Orders',
+        supportsDate: true,
+        icon: 'pending_actions',
+        color: 'text-red-500',
+        bg: 'bg-red-500/10',
+        permissionKey: 'access_report_pending_orders'
+    },
+    {
+        id: 'custom_plant_summary',
+        category: 'Operational',
+        title: 'Plant Summary',
+        desc: 'Aggregated MT volume by Plant.',
+        table: null,
+        file: 'Plant_Summary',
+        supportsDate: true,
+        icon: 'factory',
+        color: 'text-indigo-500',
+        bg: 'bg-indigo-500/10',
+        permissionKey: 'access_report_plant_summary'
+    },
+    // Master Data (No Date)
+    {
+        id: 'distributors',
+        category: 'Master Data',
+        title: 'Distributor DB',
+        desc: 'Full distributor territories & details.',
+        table: 'Distributor_Master',
+        file: 'Distributor_Master_Report',
+        supportsDate: false,
+        icon: 'store',
+        color: 'text-green-500',
+        bg: 'bg-green-500/10',
+        permissionKey: 'access_report_distributor_db'
+    },
+    {
+        id: 'custom_high_balance',
+        category: 'Master Data',
+        title: 'High Balances',
+        desc: 'Alerts for > ₹5L outstanding.',
+        table: null,
+        file: 'High_Balance',
+        supportsDate: false,
+        icon: 'money_off',
+        color: 'text-orange-500',
+        bg: 'bg-orange-500/10',
+        permissionKey: 'access_report_high_balances'
+    },
+    {
+        id: 'products',
+        category: 'Master Data',
+        title: 'Product Catalog',
+        desc: 'Pricing, weights & SKU details.',
+        table: 'product_master',
+        file: 'Product_List',
+        supportsDate: false,
+        icon: 'inventory_2',
+        color: 'text-amber-500',
+        bg: 'bg-amber-500/10',
+        permissionKey: 'access_report_product_catalog'
+    },
+    {
+        id: 'users',
+        category: 'Master Data',
+        title: 'User Roles',
+        desc: 'System access & hierarchy map.',
+        table: 'user_access_master',
+        file: 'User_Report',
+        supportsDate: true,
+        icon: 'group',
+        color: 'text-purple-500',
+        bg: 'bg-purple-500/10',
+        permissionKey: 'access_report_user_roles'
+    }
+];
+
+const Reports: React.FC<ReportsProps> = ({ currentUser }) => {
     // Selection State
     const [dateRange, setDateRange] = useState({
         start: new Date().toISOString().split('T')[0],
@@ -27,106 +130,123 @@ const Reports: React.FC = () => {
     const [downloading, setDownloading] = useState<string | null>(null);
     const [showQueue, setShowQueue] = useState(false);
     const [animatingCard, setAnimatingCard] = useState<string | null>(null);
+    const [openPicker, setOpenPicker] = useState<'start' | 'end' | null>(null);
 
-    const reportsList = [
-        // Transactional (Supports Date)
-        {
-            id: 'demand_log',
-            category: 'Operational',
-            title: 'Demand Log',
-            desc: 'Daily order logging & dispatch tracking.',
-            table: 'demand_dispatch_master',
-            file: 'Demand_Report',
-            supportsDate: true,
-            icon: 'receipt_long',
-            color: 'text-blue-500',
-            bg: 'bg-blue-500/10'
-        },
-        {
-            id: 'custom_pending',
-            category: 'Operational',
-            title: 'Pending Orders',
-            desc: 'Unpaid or undispatched order queue.',
-            table: null,
-            file: 'Pending_Orders',
-            supportsDate: true,
-            icon: 'pending_actions',
-            color: 'text-red-500',
-            bg: 'bg-red-500/10'
-        },
-        {
-            id: 'custom_plant_summary',
-            category: 'Operational',
-            title: 'Plant Summary',
-            desc: 'Aggregated MT volume by Plant.',
-            table: null,
-            file: 'Plant_Summary',
-            supportsDate: true,
-            icon: 'factory',
-            color: 'text-indigo-500',
-            bg: 'bg-indigo-500/10'
-        },
+    // Pagination
+    const [page, setPage] = useState(0);
+    const PAGE_SIZE = 10;
+    const [hasMore, setHasMore] = useState(false);
+    const [queueLoading, setQueueLoading] = useState(false);
 
-        // Master Data (No Date)
-        {
-            id: 'distributors',
-            category: 'Master Data',
-            title: 'Distributor DB',
-            desc: 'Full distributor territories & details.',
-            table: 'Distributor_Master',
-            file: 'Distributor_Master_Report',
-            supportsDate: false,
-            icon: 'store',
-            color: 'text-green-500',
-            bg: 'bg-green-500/10'
-        },
-        {
-            id: 'custom_high_balance',
-            category: 'Master Data',
-            title: 'High Balances',
-            desc: 'Alerts for > ₹5L outstanding.',
-            table: null,
-            file: 'High_Balance',
-            supportsDate: false,
-            icon: 'money_off',
-            color: 'text-orange-500',
-            bg: 'bg-orange-500/10'
-        },
-        {
-            id: 'products',
-            category: 'Master Data',
-            title: 'Product Catalog',
-            desc: 'Pricing, weights & SKU details.',
-            table: 'product_master',
-            file: 'Product_List',
-            supportsDate: false,
-            icon: 'inventory_2',
-            color: 'text-amber-500',
-            bg: 'bg-amber-500/10'
-        },
-        {
-            id: 'users',
-            category: 'Master Data',
-            title: 'User Roles',
-            desc: 'System access & hierarchy map.',
-            table: 'user_access_master',
-            file: 'User_Report',
-            supportsDate: true, // Technicaly has created_at, but behaves like master
-            icon: 'group',
-            color: 'text-purple-500',
-            bg: 'bg-purple-500/10'
+    // Initial Fetch & Subscription
+    React.useEffect(() => {
+        if (!currentUser?.emp_id) return;
+        fetchQueue(0);
+
+        const channel = supabase
+            .channel('public:report_queue')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'report_queue', filter: `emp_id=eq.${currentUser.emp_id}` }, (payload) => {
+                // If a change happens, we ideally re-fetch the current page or the first page.
+                // Re-fetching first page ensures latest data is seen.
+                fetchQueue(0);
+                if (page !== 0) setPage(0);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [currentUser?.emp_id]);
+
+    const fetchQueue = async (pageIdx: number = 0) => {
+        if (!currentUser?.emp_id) return;
+        setQueueLoading(true);
+        const start = pageIdx * PAGE_SIZE;
+        const end = start + PAGE_SIZE - 1;
+
+        const { data, error } = await supabase
+            .from('report_queue')
+            .select('*')
+            .eq('emp_id', currentUser.emp_id)
+            .order('created_at', { ascending: false })
+            .range(start, end + 1); // Fetch one extra to check limits
+
+        setQueueLoading(false);
+
+        if (data) {
+            const hasMoreData = data.length > PAGE_SIZE;
+            setHasMore(hasMoreData);
+
+            const pageData = hasMoreData ? data.slice(0, PAGE_SIZE) : data;
+
+            // Map DB fields to UI ReportRequest type
+            const mapped: ReportRequest[] = pageData.map((item: any) => {
+                const def = reportsList.find(r => r.id === item.report_id);
+                return {
+                    id: item.id.toString(),
+                    reportId: item.report_id,
+                    title: item.title,
+                    table: def?.table || null,
+                    filePrefix: def?.file || 'Report',
+                    startDate: item.start_date,
+                    endDate: item.end_date,
+                    status: item.status as any,
+                    requestedAt: new Date(item.created_at.endsWith('Z') ? item.created_at : item.created_at + 'Z')
+                };
+            });
+            setRequests(mapped);
         }
-    ];
+    };
 
-    const handleRequestReport = (reportId: string) => {
+    const loadNextPage = () => {
+        setPage(prev => {
+            const next = prev + 1;
+            fetchQueue(next);
+            return next;
+        });
+    };
+
+    const loadPrevPage = () => {
+        setPage(prev => {
+            const next = Math.max(0, prev - 1);
+            fetchQueue(next);
+            return next;
+        });
+    };
+
+    const handleRefresh = () => {
+        fetchQueue(page);
+    };
+
+    // Filter reports based on permissions
+    const accessibleReports = reportsList.filter(report => {
+        if (!currentUser?.permissions) return false;
+        const key = report.permissionKey as keyof UserMenuPermissions;
+        return currentUser.permissions[key] === true;
+    });
+
+    const handleRequestReport = async (reportId: string) => {
+        console.log("Requesting report:", reportId);
+
+        if (!currentUser?.emp_id) {
+            console.error("No emp_id found for user");
+            alert("User identity not found. Please relogin.");
+            return;
+        }
+
         const reportDef = reportsList.find(r => r.id === reportId);
-        if (!reportDef) return;
+        if (!reportDef) {
+            console.error("Report definition not found");
+            return;
+        }
 
         setAnimatingCard(reportId);
         setTimeout(() => setAnimatingCard(null), 600);
 
-        const newRequest: ReportRequest = {
-            id: Math.random().toString(36).substr(2, 9),
+        // OPTIMISTIC UI
+        const tempId = 'temp_' + Date.now();
+        const optimisticItem: ReportRequest = {
+            id: tempId,
             reportId: reportDef.id,
             title: reportDef.title,
             table: reportDef.table,
@@ -138,11 +258,44 @@ const Reports: React.FC = () => {
         };
 
         if (!showQueue) setShowQueue(true);
-        setRequests(prev => [newRequest, ...prev]);
+        // Prepend and slice
+        setRequests(prev => [optimisticItem, ...prev].slice(0, PAGE_SIZE));
 
-        setTimeout(() => {
-            setRequests(prev => prev.map(r => r.id === newRequest.id ? { ...r, status: 'Ready' } : r));
-        }, 1500);
+        try {
+            console.log("Inserting into report_queue...");
+            const { data, error } = await supabase.from('report_queue').insert([{
+                emp_id: currentUser.emp_id,
+                user_name: currentUser.user_name || 'Unknown',
+                report_id: reportDef.id,
+                title: reportDef.title,
+                status: 'Processing',
+                start_date: dateRange.start,
+                end_date: dateRange.end
+            }]).select();
+
+            if (error) {
+                console.error("Supabase Insert Error:", error);
+                throw error;
+            }
+
+            console.log("Insert success:", data);
+
+            // Sync with real DB data
+            setPage(0);
+            fetchQueue(0);
+
+            if (data && data[0]) {
+                const rowId = data[0].id;
+                setTimeout(async () => {
+                    await supabase.from('report_queue').update({ status: 'Ready' }).eq('id', rowId);
+                }, 1500);
+            }
+
+        } catch (err: any) {
+            console.error("Failed to queue:", err);
+            setRequests(prev => prev.filter(r => r.id !== tempId));
+            alert("Failed to queue report: " + err.message);
+        }
     };
 
     const executeDownload = async (req: ReportRequest) => {
@@ -151,14 +304,12 @@ const Reports: React.FC = () => {
             let data: any[] = [];
             const applyDateFilter = (query: any) => {
                 const reportDef = reportsList.find(r => r.id === req.reportId);
-                // Standard date filter for compatible reports
                 if (reportDef?.supportsDate) {
                     return query.gte('created_at', req.startDate + 'T00:00:00').lte('created_at', req.endDate + 'T23:59:59');
                 }
                 return query;
             };
 
-            // ... (Same logic for fetch) ...
             if (req.reportId.startsWith('custom_')) {
                 if (req.reportId === 'custom_pending') {
                     let query = supabase.from('demand_dispatch_master').select('*')
@@ -182,8 +333,8 @@ const Reports: React.FC = () => {
                     if (error) throw error;
                     const plantMap: Record<string, number> = {};
                     res?.forEach(order => {
-                        const plant = order.plant_name || 'Unknown';
-                        plantMap[plant] = (plantMap[plant] || 0) + (order.total_in_mt || 0);
+                        const orderPlant = order.plant_name || 'Unknown';
+                        plantMap[orderPlant] = (plantMap[orderPlant] || 0) + (order.total_in_mt || 0);
                     });
                     data = Object.entries(plantMap).map(([Plant, TotalMT]) => ({ Plant, 'Total MT': TotalMT }));
                 }
@@ -215,8 +366,8 @@ const Reports: React.FC = () => {
     };
 
     // Grouping
-    const operationalReports = reportsList.filter(r => r.category === 'Operational');
-    const masterReports = reportsList.filter(r => r.category === 'Master Data');
+    const operationalReports = accessibleReports.filter(r => r.category === 'Operational');
+    const masterReports = accessibleReports.filter(r => r.category === 'Master Data');
 
     return (
         <div className="flex h-full relative overflow-hidden bg-[var(--bg-primary)]">
@@ -238,30 +389,35 @@ const Reports: React.FC = () => {
                         </div>
 
                         {/* 2. Global Date Controller (Pill Design) */}
-                        <div className="hidden md:flex bg-[var(--bg-panel)] rounded-full border border-[var(--border-color)] shadow-sm p-1 gap-1 items-center">
-                            <div className="flex items-center gap-2 px-3 py-1.5 border-r border-[var(--border-color)]">
+                        <div className="hidden md:flex bg-[var(--bg-panel)] rounded-full border border-[var(--border-color)] shadow-sm p-1 gap-1 items-center relative">
+                            <div className="flex items-center gap-2 px-3 py-1.5 border-r border-[var(--border-color)] cursor-pointer hover:bg-[var(--bg-secondary)] rounded-l-full transition-colors" onClick={() => setOpenPicker('start')}>
                                 <span className="material-symbols-outlined text-[var(--text-muted)] text-base">calendar_today</span>
                                 <div className="flex flex-col">
                                     <span className="text-[8px] text-[var(--text-muted)] font-black uppercase tracking-widest">Start Date</span>
-                                    <input
-                                        type="date"
-                                        className="bg-transparent text-xs font-bold text-[var(--text-primary)] outline-none w-24 p-0 border-none cursor-pointer"
-                                        value={dateRange.start}
-                                        onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                                    />
+                                    <span className="text-xs font-bold text-[var(--text-primary)]">{dateRange.start}</span>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 px-3 py-1.5">
+                            <div className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-[var(--bg-secondary)] rounded-r-full transition-colors" onClick={() => setOpenPicker('end')}>
                                 <div className="flex flex-col">
                                     <span className="text-[8px] text-[var(--text-muted)] font-black uppercase tracking-widest">End Date</span>
-                                    <input
-                                        type="date"
-                                        className="bg-transparent text-xs font-bold text-[var(--text-primary)] outline-none w-24 p-0 border-none cursor-pointer"
-                                        value={dateRange.end}
-                                        onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                                    />
+                                    <span className="text-xs font-bold text-[var(--text-primary)]">{dateRange.end}</span>
                                 </div>
                             </div>
+
+                            {openPicker === 'start' && (
+                                <DatePicker
+                                    selectedDate={new Date(dateRange.start)}
+                                    onChange={(date) => setDateRange(prev => ({ ...prev, start: date.toISOString().split('T')[0] }))}
+                                    onClose={() => setOpenPicker(null)}
+                                />
+                            )}
+                            {openPicker === 'end' && (
+                                <DatePicker
+                                    selectedDate={new Date(dateRange.end)}
+                                    onChange={(date) => setDateRange(prev => ({ ...prev, end: date.toISOString().split('T')[0] }))}
+                                    onClose={() => setOpenPicker(null)}
+                                />
+                            )}
                         </div>
 
                         {/* 3. Queue Trigger */}
@@ -342,9 +498,9 @@ const Reports: React.FC = () => {
                         <div className="size-8 rounded-lg bg-[var(--bg-secondary)] flex items-center justify-center text-[var(--text-secondary)]">
                             <span className="material-symbols-outlined text-lg">playlist_play</span>
                         </div>
-                        <div>
+                        <div className="flex-1">
                             <h3 className="text-sm font-black text-[var(--text-primary)] uppercase tracking-wide">Download Queue</h3>
-                            <p className="text-[10px] text-[var(--text-muted)] font-bold">{requests.length} Requests Pending</p>
+                            <p className="text-[10px] text-[var(--text-muted)] font-bold">{requests.length} Requests • Page {page + 1}</p>
                         </div>
                     </div>
                 </div>
@@ -407,6 +563,35 @@ const Reports: React.FC = () => {
                         ))
                     )}
                 </div>
+
+                {/* Pagination Controls */}
+                <div className="p-4 border-t border-[var(--border-color)] flex items-center justify-between text-xs font-bold bg-[var(--bg-panel)] gap-2">
+                    <button
+                        onClick={handleRefresh}
+                        className="size-8 flex items-center justify-center rounded-lg bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--color-primary)] hover:text-white transition-all shadow-sm"
+                        title="Refresh Queue"
+                    >
+                        <span className={`material-symbols-outlined text-lg ${queueLoading ? 'animate-spin' : ''}`}>refresh</span>
+                    </button>
+
+                    <div className="flex-1 flex items-center justify-end gap-2">
+                        <span className="text-[var(--text-secondary)] mr-2">Page {page + 1}</span>
+                        <button
+                            onClick={loadPrevPage}
+                            disabled={page === 0 || queueLoading}
+                            className="size-8 flex items-center justify-center rounded-lg bg-[var(--bg-secondary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                            <span className="material-symbols-outlined text-sm">chevron_left</span>
+                        </button>
+                        <button
+                            onClick={loadNextPage}
+                            disabled={!hasMore || queueLoading}
+                            className="size-8 flex items-center justify-center rounded-lg bg-[var(--bg-secondary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                            <span className="material-symbols-outlined text-sm">chevron_right</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -415,9 +600,8 @@ const Reports: React.FC = () => {
 // Sub-component for clean cards
 const ReportCard = ({ report, onAdd, animating, compact }: { report: any, onAdd: any, animating: boolean, compact: boolean }) => (
     <div
-        onClick={() => onAdd(report.id)}
         className={`
-            bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-2xl p-4 cursor-pointer
+            bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-2xl p-4
             hover:border-[var(--color-primary)] hover:shadow-lg transition-all duration-300 group relative overflow-hidden flex flex-col justify-between
             ${compact ? 'h-[110px]' : 'h-[160px]'}
         `}
@@ -428,7 +612,10 @@ const ReportCard = ({ report, onAdd, animating, compact }: { report: any, onAdd:
             <div className={`size-10 rounded-xl ${report.bg} ${report.color} flex items-center justify-center transition-all duration-300 ${compact ? 'scale-90' : ''}`}>
                 <span className="material-symbols-outlined text-xl">{report.icon}</span>
             </div>
-            <button className="size-8 rounded-full bg-[var(--bg-secondary)] text-[var(--text-secondary)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--color-primary)] hover:text-white">
+            <button
+                onClick={() => onAdd(report.id)}
+                className="size-8 rounded-full bg-[var(--bg-secondary)] text-[var(--text-secondary)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--color-primary)] hover:text-white cursor-pointer"
+            >
                 <span className="material-symbols-outlined text-lg">add</span>
             </button>
         </div>

@@ -1,43 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { AppState, DemandDispatchMaster, Distributor } from '../types';
+import { AppState, ProductMaster } from '../types';
 
 interface AddDemandProps {
     onNavigate: (page: AppState) => void;
 }
-
-interface ProductConfig {
-    key: keyof DemandDispatchMaster;
-    label: string;
-    weightV?: number;
-}
-
-const PRODUCTS: ProductConfig[] = [
-    { key: 'supreme_50kg', label: 'Supreme 50kg', weightV: 50 },
-    { key: 'supreme_25kg', label: 'Supreme 25kg', weightV: 25 },
-    { key: 'gold_pro_50kg', label: 'Gold Pro 50kg', weightV: 50 },
-    { key: 'gold_pro_25kg', label: 'Gold Pro 25kg', weightV: 25 },
-    { key: 'doodh_plus_50kg', label: 'Doodh Plus 50kg', weightV: 50 },
-    { key: 'doodh_plus_25kg', label: 'Doodh Plus 25kg', weightV: 25 },
-    { key: 'bhains_special_50kg', label: 'Bhains Special 50kg', weightV: 50 },
-    { key: 'diamond_pro_50kg', label: 'Diamond Pro 50kg', weightV: 50 },
-    { key: 'transition_feed_25kg', label: 'Transition Feed 25kg', weightV: 25 },
-    { key: 'calf_starter_5kg', label: 'Calf Starter 5kg', weightV: 5 },
-    { key: 'cmm_red_10kg', label: 'CMM Red 10kg', weightV: 10 },
-    { key: 'cmm_premium_10kg', label: 'CMM Premium 10kg', weightV: 10 },
-    { key: 'milk_maxima_20ltrs', label: 'Milk Maxima 20L' },
-    { key: 'milk_maxima_10ltrs', label: 'Milk Maxima 10L' },
-    { key: 'milk_maxima_5x3ltrs', label: 'Milk Maxima 5x3L' },
-    { key: 'milk_maxima_1x16ltrs', label: 'Milk Maxima 1x16L' },
-    { key: 'milk_maxima_5x2ltrs', label: 'Milk Maxima 5x2L' },
-    { key: 'batisa_gold_20gms', label: 'Batisa Gold 20g' },
-    { key: 'batisa_gold_100gms', label: 'Batisa Gold 100g' },
-    { key: 'masti_shield_20x300gms', label: 'Masti Shield' },
-    { key: 'snf_power_plus_20x500gms', label: 'SNF Power Plus' },
-    { key: 'toxin_binder_20x500gms', label: 'Toxin Binder' },
-    { key: 'utriclean_1x10_bottle', label: 'Utriclean' },
-];
 
 const AddDemand: React.FC<AddDemandProps> = ({ onNavigate }) => {
     const [step, setStep] = useState(1);
@@ -56,17 +23,92 @@ const AddDemand: React.FC<AddDemandProps> = ({ onNavigate }) => {
     const [currentPriority, setCurrentPriority] = useState('P1');
     const [currentProducts, setCurrentProducts] = useState<Record<string, number>>({});
 
+    // Dynamic Products & Categories
+    const [products, setProducts] = useState<ProductMaster[]>([]);
+    const [activeTab, setActiveTab] = useState<string>('');
+
+    // LIST OF VALID COLUMNS IN DB (from DemandDispatchMaster)
+    // This acts as a whitelist to prevent "column not found" errors
+    const VALID_DB_COLUMNS = new Set([
+        'supreme_50kg', 'supreme_25kg',
+        'gold_pro_50kg', 'gold_pro_25kg',
+        'doodh_plus_50kg', 'doodh_plus_25kg',
+        'bhains_special_50kg',
+        'diamond_pro_50kg',
+        'transition_feed_25kg',
+        'calf_starter_5kg',
+        'cmm_red_10kg', 'cmm_premium_10kg',
+        'milk_maxima_20ltrs', 'milk_maxima_10ltrs',
+        'milk_maxima_5x3ltrs', 'milk_maxima_1x16ltrs', 'milk_maxima_5x2ltrs',
+        'batisa_gold_20gms', 'batisa_gold_100gms',
+        'masti_shield_20x300gms',
+        'snf_power_plus_20x500gms',
+        'toxin_binder_20x500gms',
+        'utriclean_1x10_bottle'
+    ]);
+
+    // Mapping for special cases where Product Name slug doesn't match DB Column
+    const PRODUCT_KEY_MAPPING: Record<string, string> = {
+        'milk_maxima_20l': 'milk_maxima_20ltrs',
+        'milk_maxima_10l': 'milk_maxima_10ltrs',
+        'milk_maxima_5x3l': 'milk_maxima_5x3ltrs',
+        'milk_maxima_1x16l': 'milk_maxima_1x16ltrs',
+        'milk_maxima_5x2l': 'milk_maxima_5x2ltrs',
+        'batisa_gold_20g': 'batisa_gold_20gms',
+        'batisa_gold_100g': 'batisa_gold_100gms',
+        'masti_shield': 'masti_shield_20x300gms',
+        'snf_power_plus': 'snf_power_plus_20x500gms',
+        'toxin_binder': 'toxin_binder_20x500gms',
+        'utriclean': 'utriclean_1x10_bottle'
+    };
+
     // Queue
     const [demandQueue, setDemandQueue] = useState<any[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         fetchDistributors();
+        fetchProducts();
     }, []);
 
     const fetchDistributors = async () => {
         const { data } = await supabase.from('Distributor_Master').select('*');
         if (data) setDistributors(data);
+    };
+
+    const fetchProducts = async () => {
+        const { data, error } = await supabase
+            .from('product_master')
+            .select('*')
+            .eq('status', 'Active')
+            .order('product_id', { ascending: true });
+
+        if (data) {
+            setProducts(data);
+            // Set default tab to the first category if available
+            const uniqueCategories = Array.from(new Set(data.map((p: any) => p.category || 'Other')));
+            if (uniqueCategories.length > 0) {
+                setActiveTab(uniqueCategories[0]);
+            } else {
+                setActiveTab('Cattle Feed'); // Fallback
+            }
+        }
+    };
+
+    // Helper to generate keys that match the DB columns in demand_dispatch_master
+    const generateKey = (name: string): string => {
+        // 1. Basic slug generation
+        const slug = name.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
+        // 2. Check explicit mapping
+        if (PRODUCT_KEY_MAPPING[slug]) {
+            return PRODUCT_KEY_MAPPING[slug];
+        }
+
+        // 3. Fallback: Check for common patterns if specific mapping missed
+        // Replace ending 'l' with 'ltrs' if it's a known volume pattern, but be careful
+        // For now, explicit mapping is safer.
+        return slug;
     };
 
     const filteredDistributors = distributors.filter(d =>
@@ -87,11 +129,23 @@ const AddDemand: React.FC<AddDemandProps> = ({ onNavigate }) => {
             return;
         }
 
-        // Calculate MT (simplified)
+        if (dispatchType === 'Self') {
+            if (!vehicleNumber.trim()) {
+                alert("Vehicle Number is required for Self Vehicle dispatch.");
+                return;
+            }
+            if (vehicleNumber.trim().length < 5) {
+                alert("Please enter a valid Vehicle Number (e.g., MH-12-AB-1234).");
+                return;
+            }
+        }
+
+        // Calculate MT
         let mt = 0;
-        PRODUCTS.forEach(p => {
-            if (p.weightV && currentProducts[p.key]) {
-                mt += (currentProducts[p.key] * p.weightV) / 1000;
+        products.forEach(p => {
+            const key = generateKey(p.product_name);
+            if (p.weight && currentProducts[key]) {
+                mt += (currentProducts[key] * p.weight) / 1000;
             }
         });
 
@@ -99,7 +153,7 @@ const AddDemand: React.FC<AddDemandProps> = ({ onNavigate }) => {
             location: currentLocation,
             plant: currentPlant,
             priority: currentPriority,
-            products: { ...currentProducts },
+            products: { ...currentProducts }, // Stores keys like 'supreme_50kg': 10
             total_mt: parseFloat(mt.toFixed(3)),
             id: Date.now()
         };
@@ -121,13 +175,20 @@ const AddDemand: React.FC<AddDemandProps> = ({ onNavigate }) => {
         setIsSubmitting(true);
 
         try {
-            // Generate a single Order ID for the batch
-            // In a real app, maybe fetch max order_id + 1, or use a specific function
-            // For now, let's use timestamp-based pseudo ID for demo or fetch
             const { data: maxData } = await supabase.from('demand_dispatch_master').select('order_id').order('order_id', { ascending: false }).limit(1);
             const nextOrderId = (maxData && maxData[0]?.order_id ? maxData[0].order_id : 1000) + 1;
 
             const rowsToInsert = demandQueue.map(item => {
+                // Filter out invalid product keys to prevent DB errors
+                const validProducts: Record<string, number> = {};
+                Object.entries(item.products).forEach(([key, qty]) => {
+                    if (VALID_DB_COLUMNS.has(key)) {
+                        validProducts[key] = qty as number;
+                    } else {
+                        console.warn(`Skipping invalid product key: ${key} (not in schema)`);
+                    }
+                });
+
                 const row: any = {
                     order_id: nextOrderId,
                     db_id: selectedDistributor['DB ID'],
@@ -144,7 +205,7 @@ const AddDemand: React.FC<AddDemandProps> = ({ onNavigate }) => {
                     total_in_mt: item.total_mt,
                     demand_date: new Date().toISOString().split('T')[0],
                     created_at: new Date().toISOString(),
-                    ...item.products
+                    ...validProducts // Only spread valid columns
                 };
                 return row;
             });
@@ -158,12 +219,14 @@ const AddDemand: React.FC<AddDemandProps> = ({ onNavigate }) => {
 
         } catch (err: any) {
             console.error("Submission error:", err);
-            alert("Failed to minimize order: " + err.message);
+            alert("Failed to submit order: " + err.message);
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    // Get unique categories for tabs
+    const categories = Array.from(new Set(products.map(p => p.category || 'Other'))).sort();
 
     return (
         <div className="max-w-5xl mx-auto space-y-8 animate-fadeIn pb-20">
@@ -233,6 +296,9 @@ const AddDemand: React.FC<AddDemandProps> = ({ onNavigate }) => {
                         <div>
                             <h3 className="font-bold text-[var(--text-primary)] text-lg">{selectedDistributor['NAME OF DISTRIBUTOR']}</h3>
                             <div className="text-sm text-[var(--text-secondary)]">Plant: <span className="text-[var(--text-primary)] font-semibold">{currentPlant}</span> | District: {selectedDistributor['DISTRICT']}</div>
+                            <div className="text-sm font-bold text-[var(--color-primary)] mt-1">
+                                Closing Balance: ₹{(selectedDistributor['closing_balance'] || 0).toLocaleString()}
+                            </div>
                         </div>
                         <button onClick={() => { setStep(1); setDemandQueue([]); }} className="ml-auto text-xs font-bold text-[var(--color-primary)] hover:underline">Change</button>
                     </div>
@@ -259,12 +325,13 @@ const AddDemand: React.FC<AddDemandProps> = ({ onNavigate }) => {
 
                         {dispatchType === 'Self' && (
                             <div>
-                                <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase mb-2">Vehicle Number</label>
+                                <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase mb-2">Vehicle Number <span className="text-red-500">*</span></label>
                                 <input
                                     value={vehicleNumber}
                                     onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
                                     className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-sm font-mono text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none"
                                     placeholder="MH-XX-XX-XXXX"
+                                    required
                                 />
                             </div>
                         )}
@@ -308,21 +375,46 @@ const AddDemand: React.FC<AddDemandProps> = ({ onNavigate }) => {
                             </div>
                         </div>
 
-                        {/* Products Grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
-                            {PRODUCTS.map(prod => (
-                                <div key={prod.key}>
-                                    <label className="block text-[10px] text-[var(--text-secondary)] mb-1 truncate" title={prod.label}>{prod.label}</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={currentProducts[prod.key] || ''}
-                                        onChange={e => setCurrentProducts({ ...currentProducts, [prod.key]: parseFloat(e.target.value) || 0 })}
-                                        className={`w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none ${currentProducts[prod.key] ? 'border-green-500/50 bg-green-500/5' : ''}`}
-                                        placeholder="0"
-                                    />
-                                </div>
+
+                        {/* Dynamic Tabbed Interface */}
+                        <div className="flex bg-[var(--bg-primary)] p-1 rounded-xl mb-6 overflow-x-auto custom-scrollbar">
+                            {categories.map(category => (
+                                <button
+                                    key={category}
+                                    onClick={() => setActiveTab(category)}
+                                    className={`flex-1 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === category
+                                        ? 'bg-[var(--bg-panel)] text-[var(--color-primary)] shadow-sm'
+                                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                                        }`}
+                                >
+                                    {category}
+                                </button>
                             ))}
+                        </div>
+
+                        {/* Product List Stack */}
+                        <div className="space-y-3 mb-8 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                            {products.filter(p => p.category === activeTab).map(prod => {
+                                const key = generateKey(prod.product_name);
+                                return (
+                                    <div key={prod.product_id} className="flex items-center justify-between p-3 rounded-xl border border-[var(--border-color)] hover:bg-[var(--bg-primary)] transition-colors group">
+                                        <label className="font-medium text-[var(--text-primary)] text-sm flex-1">{prod.product_name}</label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={currentProducts[key] || ''}
+                                                onChange={e => setCurrentProducts({ ...currentProducts, [key]: parseFloat(e.target.value) || 0 })}
+                                                className={`w-24 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none text-right font-mono transition-colors ${currentProducts[key] ? 'border-green-500/50 text-green-400 bg-green-500/5' : ''}`}
+                                                placeholder="Qty"
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {products.length === 0 && (
+                                <div className="text-center text-[var(--text-muted)] py-4">Loading products...</div>
+                            )}
                         </div>
 
                         <button
@@ -339,17 +431,41 @@ const AddDemand: React.FC<AddDemandProps> = ({ onNavigate }) => {
                         <div className="space-y-4">
                             <h3 className="font-bold text-[var(--text-secondary)] text-sm uppercase tracking-wider">Queue ({demandQueue.length})</h3>
                             {demandQueue.map((item, idx) => (
-                                <div key={item.id} className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl p-4 flex justify-between items-center animate-fadeIn">
-                                    <div className="flex gap-4 items-center">
-                                        <div className="size-8 rounded-full bg-[var(--bg-primary)] border border-[var(--border-color)] flex items-center justify-center text-xs font-bold text-[var(--text-secondary)]">{idx + 1}</div>
-                                        <div>
-                                            <div className="font-bold text-[var(--text-primary)]">{item.location}</div>
-                                            <div className="text-xs text-[var(--text-secondary)]">{item.total_mt} MT • {item.priority}</div>
+                                <div key={item.id} className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl p-4 animate-fadeIn relative overflow-hidden group">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="flex gap-3 items-center">
+                                            <div className="size-8 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center text-sm font-bold shadow-lg shadow-blue-500/20">
+                                                {idx + 1}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-[var(--text-primary)] text-lg leading-tight">{item.location}</div>
+                                                <div className="text-xs font-bold text-[var(--text-secondary)] mt-0.5 flex gap-2">
+                                                    <span className="text-[var(--color-primary)]">{item.total_mt} MT</span>
+                                                    <span>•</span>
+                                                    <span className={`px-1.5 rounded ${item.priority === 'P1' ? 'bg-red-500/10 text-red-400' : 'bg-gray-500/10 text-gray-400'}`}>{item.priority}</span>
+                                                </div>
+                                            </div>
                                         </div>
+                                        <button onClick={() => handleRemoveFromQueue(item.id)} className="text-gray-500 hover:text-red-400 p-2 rounded-lg transition-colors bg-white/5 hover:bg-white/10">
+                                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                                        </button>
                                     </div>
-                                    <button onClick={() => handleRemoveFromQueue(item.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">
-                                        <span className="material-symbols-outlined text-[20px]">delete</span>
-                                    </button>
+
+                                    {/* Detailed Product List in Queue */}
+                                    <div className="flex flex-wrap gap-2 pl-11">
+                                        {Object.entries(item.products as Record<string, number>).map(([key, qty]) => {
+                                            if (!qty) return null;
+                                            // Find product by generating key from fetched products or strictly matching if possible
+                                            // Since we generated keys from product_name, we can try to find the product name back
+                                            const prod = products.find(p => generateKey(p.product_name) === key);
+                                            return (
+                                                <div key={key} className="text-[10px] bg-[var(--bg-secondary)] border border-[var(--border-color)] px-2 py-1 rounded-md text-[var(--text-secondary)] flex items-center gap-1">
+                                                    <span className="opacity-70">{prod?.product_name || key}:</span>
+                                                    <span className="font-bold text-[var(--text-primary)]">{qty}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             ))}
 

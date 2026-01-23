@@ -55,7 +55,7 @@ const ProductMasterPage: React.FC = () => {
   const handleOpenAdd = () => {
     setEditingProduct({
       product_name: '',
-      category: '',
+      category: 'Cattle Feed',
       price: 0,
       weight: 0,
       unit: 'kg',
@@ -81,9 +81,10 @@ const ProductMasterPage: React.FC = () => {
         const { error } = await supabase.from('product_master').insert([editingProduct]);
         if (error) throw error;
       } else {
+        const { product_id, ...updates } = editingProduct;
         const { error } = await supabase
           .from('product_master')
-          .update(editingProduct)
+          .update(updates)
           .eq('product_id', editingProduct.product_id);
         if (error) throw error;
       }
@@ -200,9 +201,11 @@ const ProductMasterPage: React.FC = () => {
                     className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none appearance-none"
                   >
                     <option value="">All Categories</option>
-                    <option value="Cattle Feed">Cattle Feed</option>
-                    <option value="Supplements">Supplements</option>
-                    <option value="Medicine">Medicine</option>
+                    {Array.from(new Set(products.map(p => p.category || '').filter(Boolean)))
+                      .sort()
+                      .map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
                   </select>
                 </th>
                 <th className="px-4 py-2 text-right">
@@ -320,9 +323,11 @@ const ProductMasterPage: React.FC = () => {
                     onChange={e => setEditingProduct({ ...editingProduct, category: e.target.value })}
                   >
                     <option value="">Select Category</option>
-                    <option value="Cattle Feed">Cattle Feed</option>
-                    <option value="Supplements">Supplements</option>
-                    <option value="Medicine">Medicine</option>
+                    {Array.from(new Set(products.map(p => p.category || '').filter(Boolean)))
+                      .sort()
+                      .map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
                   </select>
                 </div>
 

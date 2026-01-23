@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/UserManagement';
+import UserPermissionManagement from './pages/UserPermissionManagement';
 import ProductMaster from './pages/ProductMaster';
 import DistributorMaster from './pages/DistributorMaster';
 import PendingOrders from './pages/PendingOrders';
@@ -18,6 +19,12 @@ import Reports from './pages/Reports';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import { AppState, UserAccessMaster } from './types';
+
+// Add USER_PERMISSION_MANAGEMENT to AppState type locally if it wasn't updated in types.ts (Wait, types.ts wasn't updated with the AppState enum change yet! I need to do that too)
+// Actually I missed updating AppState in types.ts in previous step. 
+// I will just use string casting or assume it's there? No, I should update types.ts properly.
+// But for this file I will add the case.
+
 
 const App: React.FC = () => {
   const [activePage, setActivePage] = useState<AppState>('LOGIN');
@@ -63,6 +70,7 @@ const App: React.FC = () => {
     switch (activePage) {
       case 'DASHBOARD': return <Dashboard isAdmin={isAdmin} />;
       case 'USER_MANAGEMENT': return <UserManagement onNavigate={setActivePage} />;
+      case 'USER_PERMISSION_MANAGEMENT': return <UserPermissionManagement onNavigate={setActivePage} />;
       case 'PRODUCT_MASTER': return <ProductMaster />;
       case 'DISTRIBUTOR_CONTROL': return <DistributorMaster />;
       case 'PENDING_ORDERS': return <PendingOrders onNavigate={setActivePage} />;
@@ -74,7 +82,7 @@ const App: React.FC = () => {
       case 'ADD_DEMAND': return <AddDemand onNavigate={setActivePage} />;
       case 'SALES_HIERARCHY': return <SalesHierarchy />;
       case 'UPLOAD_BALANCE': return <UploadBalance />;
-      case 'REPORTS': return <Reports />;
+      case 'REPORTS': return <Reports currentUser={currentUser} />;
       default: return <Dashboard isAdmin={isAdmin} />;
     }
   };

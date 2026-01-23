@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { Distributor } from '../types';
 import { supabase } from '../supabaseClient';
@@ -24,11 +23,23 @@ interface DistributorFull extends Distributor {
   doj?: string;
   exclusive?: string;
   open_remark?: string;
+  closing_balance?: number;
+}
+
+interface SalesUser {
+  user_id: number;
+  user_name: string;
+  role: string;
 }
 
 const DistributorMasterPage: React.FC = () => {
   const [distributors, setDistributors] = useState<DistributorFull[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Sales Team Data
+  const [rsmList, setRsmList] = useState<SalesUser[]>([]);
+  const [asmList, setAsmList] = useState<SalesUser[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
 
   // Search state
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,7 +60,28 @@ const DistributorMasterPage: React.FC = () => {
 
   useEffect(() => {
     fetchDistributors();
+    fetchSalesTeam();
   }, []);
+
+  const fetchSalesTeam = async () => {
+    setTeamLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_access_master')
+        .select('user_id, user_name, role')
+        .in('role', ['RSM', 'ASM']);
+
+      if (error) throw error;
+      if (data) {
+        setRsmList(data.filter((u: any) => u.role === 'RSM'));
+        setAsmList(data.filter((u: any) => u.role === 'ASM'));
+      }
+    } catch (err) {
+      console.error('Error fetching sales team:', err);
+    } finally {
+      setTeamLoading(false);
+    }
+  };
 
   const fetchDistributors = async () => {
     setLoading(true);
@@ -88,7 +120,8 @@ const DistributorMasterPage: React.FC = () => {
           gst: d['GST'] || '',
           doj: d['DOJ'],
           exclusive: d['Exclusive / \nNon-\nExclusive'],
-          open_remark: d['Open Remark']
+          open_remark: d['Open Remark'],
+          closing_balance: d['closing_balance']
         })));
       }
     } catch (err: any) {
@@ -107,7 +140,8 @@ const DistributorMasterPage: React.FC = () => {
       region: '',
       district: '',
       plant: '',
-      mobile1: undefined
+      mobile1: undefined,
+      closing_balance: 0
     });
     setIsNewDistributor(true);
     setIsModalOpen(true);
@@ -127,7 +161,9 @@ const DistributorMasterPage: React.FC = () => {
         'DB ID': editingDistributor.dbId,
         'Status': editingDistributor.status,
         'RSM': editingDistributor.rsm,
+        'RSM ID': editingDistributor.rsm_id, // Save ID
         'ASM': editingDistributor.asm,
+        'ASM ID': editingDistributor.asm_id, // Save ID
         'REGION': editingDistributor.region,
         'DISTRICT': editingDistributor.district,
         'PLANT': editingDistributor.plant,
@@ -140,12 +176,29 @@ const DistributorMasterPage: React.FC = () => {
         'Email': editingDistributor.email,
         'PAN NO.': editingDistributor.pan,
         'GST': editingDistributor.gst,
+        'closing_balance': editingDistributor.closing_balance // Added field
       };
 
       if (isNewDistributor) {
         const { error } = await supabase.from('Distributor_Master').insert([payload]);
         if (error) throw error;
       } else {
+        // --- Special Logic: If Status changes to Inactive (Closing) ---
+        if (editingDistributor.status === 'Inactive' && distributors.find(d => d.dbId === editingDistributor.dbId)?.status === 'Active') {
+          payload['closing_date'] = new Date().toISOString(); // Auto-set closing date
+          payload['Close Remark'] = editingDistributor.open_remark || 'Closed via Distributor Master'; // Capture remark if available
+
+          // Log to History
+          await supabase.from('territory_history').insert([{
+            db_id: editingDistributor.dbId,
+            asm_id: editingDistributor.asm_id || 0, // Fallback if missing
+            asm_name: editingDistributor.asm || 'Unknown',
+            assigned_by: 'Admin',
+            start_date: new Date().toISOString(), // This is effectively the "closing event" log or end date update
+            reason: 'Distributor Closed/Inactive'
+          }]);
+        }
+
         const { error } = await supabase
           .from('Distributor_Master')
           .update(payload)
@@ -178,7 +231,6 @@ const DistributorMasterPage: React.FC = () => {
 
   const filteredDistributors = distributors.filter(d => {
     // 1. Global Search (OR)
-    // Safe access as we mapped nulls to empty strings, but double check doesn't hurt OR logic
     const matchesSearch =
       (d.distributorName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (d.dbName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -275,6 +327,7 @@ const DistributorMasterPage: React.FC = () => {
                 <th className="px-6 py-4">Location</th>
                 <th className="px-6 py-4">Sales Team</th>
                 <th className="px-6 py-4">Contact</th>
+                <th className="px-6 py-4">Closing Bal</th>
                 <th className="px-6 py-4 text-center">Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
@@ -320,6 +373,7 @@ const DistributorMasterPage: React.FC = () => {
                     className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
                   />
                 </th>
+                <th className="px-4 py-2"></th>
                 <th className="px-4 py-2 text-center">
                   <input
                     placeholder="Status"
@@ -333,9 +387,9 @@ const DistributorMasterPage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-[var(--border-color)] text-sm">
               {loading ? (
-                <tr><td colSpan={7} className="p-8 text-center text-[var(--text-muted)]">Loading distributor network...</td></tr>
+                <tr><td colSpan={8} className="p-8 text-center text-[var(--text-muted)]">Loading distributor network...</td></tr>
               ) : filteredDistributors.length === 0 ? (
-                <tr><td colSpan={7} className="p-8 text-center text-[var(--text-muted)]">No distributors found matching criteria.</td></tr>
+                <tr><td colSpan={8} className="p-8 text-center text-[var(--text-muted)]">No distributors found matching criteria.</td></tr>
               ) : (
                 filteredDistributors.map(dist => (
                   <tr key={dist.dbId} className="hover:bg-[var(--bg-secondary)] transition-colors group">
@@ -357,6 +411,9 @@ const DistributorMasterPage: React.FC = () => {
                     <td className="px-6 py-4 text-xs text-[var(--text-secondary)] font-mono">
                       <div>{dist.mobile1}</div>
                       <div className="text-[var(--text-muted)]">{dist.gst}</div>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-right font-mono font-bold text-[var(--text-primary)]">
+                      ₹{(dist.closing_balance || 0).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${dist.status === 'Active'
@@ -508,19 +565,43 @@ const DistributorMasterPage: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">RSM Name</label>
-                  <input
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl p-3 text-[var(--text-primary)] focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all placeholder-[var(--text-muted)]"
-                    value={editingDistributor.rsm || ''}
-                    onChange={e => setEditingDistributor({ ...editingDistributor, rsm: e.target.value })}
-                  />
+                  <select
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl p-3 text-[var(--text-primary)] focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all font-mono"
+                    value={editingDistributor.rsm_id || ''}
+                    onChange={(e) => {
+                      const selected = rsmList.find(r => r.user_id.toString() === e.target.value);
+                      setEditingDistributor({
+                        ...editingDistributor,
+                        rsm_id: selected ? selected.user_id : undefined,
+                        rsm: selected ? selected.user_name : ''
+                      });
+                    }}
+                  >
+                    <option value="">Select RSM</option>
+                    {rsmList.map(rsm => (
+                      <option key={rsm.user_id} value={rsm.user_id}>{rsm.user_name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">ASM Name</label>
-                  <input
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl p-3 text-[var(--text-primary)] focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all placeholder-[var(--text-muted)]"
-                    value={editingDistributor.asm || ''}
-                    onChange={e => setEditingDistributor({ ...editingDistributor, asm: e.target.value })}
-                  />
+                  <select
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl p-3 text-[var(--text-primary)] focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all font-mono"
+                    value={editingDistributor.asm_id || ''}
+                    onChange={(e) => {
+                      const selected = asmList.find(a => a.user_id.toString() === e.target.value);
+                      setEditingDistributor({
+                        ...editingDistributor,
+                        asm_id: selected ? selected.user_id : undefined,
+                        asm: selected ? selected.user_name : ''
+                      });
+                    }}
+                  >
+                    <option value="">Select ASM</option>
+                    {asmList.map(asm => (
+                      <option key={asm.user_id} value={asm.user_id}>{asm.user_name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">GST No.</label>
@@ -540,12 +621,12 @@ const DistributorMasterPage: React.FC = () => {
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">Email</label>
+                  <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1.5">Closing Balance</label>
                   <input
-                    type="email"
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl p-3 text-[var(--text-primary)] focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all placeholder-[var(--text-muted)]"
-                    value={editingDistributor.email || ''}
-                    onChange={e => setEditingDistributor({ ...editingDistributor, email: e.target.value })}
+                    type="number"
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl p-3 text-[var(--text-primary)] focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all placeholder-[var(--text-muted)] font-mono"
+                    value={editingDistributor.closing_balance || ''}
+                    onChange={e => setEditingDistributor({ ...editingDistributor, closing_balance: parseFloat(e.target.value) })}
                   />
                 </div>
               </form>

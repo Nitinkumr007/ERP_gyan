@@ -28,7 +28,12 @@ const Header: React.FC<HeaderProps> = ({ activePage, isAdmin }) => {
     BALANCE_CHECK: 'DBR Balance Check',
     SETTINGS: 'System Configuration',
     LOGIN: '',
-    PROFILE: 'My Profile'
+    PROFILE: 'My Profile',
+    USER_PERMISSION_MANAGEMENT: 'User Access Control',
+    ADD_DEMAND: 'New Demand Creation',
+    SALES_HIERARCHY: 'Sales Hierarchy',
+    UPLOAD_BALANCE: 'Balance Upload',
+    REPORTS: 'Reports Center',
   };
 
   const pageSubtitles: Record<AppState, string> = {
@@ -42,7 +47,12 @@ const Header: React.FC<HeaderProps> = ({ activePage, isAdmin }) => {
     BALANCE_CHECK: 'Financial Overview',
     SETTINGS: 'Configure global rules and preferences',
     LOGIN: '',
-    PROFILE: 'Account Settings & Security'
+    PROFILE: 'Account Settings & Security',
+    USER_PERMISSION_MANAGEMENT: 'Manage user permissions and access levels',
+    ADD_DEMAND: 'Create and submit new demand requests',
+    SALES_HIERARCHY: 'Manage sales territory structure',
+    UPLOAD_BALANCE: 'Upload and verify distributor balances',
+    REPORTS: 'Operational and Master Data Reports',
   };
 
   const formatDate = (d: Date) => {
@@ -50,7 +60,7 @@ const Header: React.FC<HeaderProps> = ({ activePage, isAdmin }) => {
   };
 
   return (
-    <header className="h-20 flex items-center justify-between px-8 py-4 border-b border-white/5 bg-forest-950/50 backdrop-blur-md sticky top-0 z-50">
+    <header className="h-16 flex items-center justify-between px-6 py-3 border-b border-white/5 bg-forest-950/50 backdrop-blur-md sticky top-0 z-50">
       <div>
         <h2 className="text-2xl font-bold text-white tracking-tight leading-none mb-1">
           {pageTitles[activePage] || 'Demand App'}

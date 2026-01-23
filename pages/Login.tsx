@@ -69,8 +69,20 @@ const Login: React.FC<LoginProps> = ({ onLogin, toggleTheme, currentTheme }) => 
         return;
       }
 
+      // Fetch Permissions
+      const { data: permData, error: permError } = await supabase
+        .from('user_menu_permissions')
+        .select('*')
+        .eq('emp_id', empId)
+        .single();
+
+      const fullUser: UserAccessMaster = {
+        ...data,
+        permissions: permData || undefined
+      };
+
       // Pass full user object
-      onLogin(data as UserAccessMaster);
+      onLogin(fullUser);
 
     } catch (err: any) {
       setError(`Login failed: ${err.message || 'Unknown error'}`);

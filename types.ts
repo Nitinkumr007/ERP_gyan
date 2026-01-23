@@ -1,5 +1,5 @@
 
-export type AppState = 'LOGIN' | 'DASHBOARD' | 'USER_MANAGEMENT' | 'PRODUCT_MASTER' | 'DISTRIBUTOR_CONTROL' | 'PENDING_ORDERS' | 'ORDER_HISTORY' | 'PARTNER_NETWORK' | 'BALANCE_CHECK' | 'SETTINGS' | 'PROFILE' | 'ADD_DEMAND' | 'SALES_HIERARCHY' | 'UPLOAD_BALANCE' | 'REPORTS';
+export type AppState = 'LOGIN' | 'DASHBOARD' | 'USER_MANAGEMENT' | 'USER_PERMISSION_MANAGEMENT' | 'PRODUCT_MASTER' | 'DISTRIBUTOR_CONTROL' | 'PENDING_ORDERS' | 'ORDER_HISTORY' | 'PARTNER_NETWORK' | 'BALANCE_CHECK' | 'SETTINGS' | 'PROFILE' | 'ADD_DEMAND' | 'SALES_HIERARCHY' | 'UPLOAD_BALANCE' | 'REPORTS';
 
 export interface User {
   id: string;
@@ -30,6 +30,38 @@ export interface UserAccessMaster {
   created_at?: string;
   updated_at?: string;
   reporting_manager_id?: string | null;
+  permissions?: UserMenuPermissions; // Extended for granular access
+}
+
+export interface UserMenuPermissions {
+  // Masters
+  access_product_master: boolean;
+  access_user_management: boolean;
+  access_user_permissions: boolean; // New
+  access_distributor_control: boolean;
+  access_sales_hierarchy: boolean;
+  access_partner_network: boolean;
+  access_system_settings: boolean;
+
+  // Reports
+  access_dashboard: boolean; // System Overview
+  access_reports_center: boolean;
+  access_order_history: boolean;
+  access_dbr_balance: boolean;
+  access_system_demands: boolean;
+
+  // Granular Reports
+  access_report_demand_log?: boolean;
+  access_report_pending_orders?: boolean;
+  access_report_plant_summary?: boolean;
+  access_report_distributor_db?: boolean;
+  access_report_high_balances?: boolean;
+  access_report_product_catalog?: boolean;
+  access_report_user_roles?: boolean;
+
+  // Demand User
+  access_new_demand: boolean;
+  access_upload_balance: boolean;
 }
 
 // Based on public.product_master
@@ -60,6 +92,18 @@ export interface Distributor {
   asm?: string;
   executive?: string;
   address?: string;
+  closing_date?: string; // Added field
+}
+
+export interface TerritoryHistory {
+  id: number;
+  db_id: number;
+  asm_id: number;
+  asm_name: string;
+  assigned_by?: string;
+  start_date: string;
+  end_date?: string;
+  reason?: string;
 }
 
 export interface DemandDispatchMaster {
@@ -108,4 +152,16 @@ export interface DemandDispatchMaster {
   utriclean_1x10_bottle: number | null;
   total_in_mt: number | null;
   created_at: string | null;
+}
+
+export interface ReportQueueItem {
+  id: number;
+  emp_id: string;
+  user_name: string;
+  report_id: string;
+  title: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  created_at: string;
 }

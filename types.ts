@@ -1,5 +1,5 @@
 
-export type AppState = 'LOGIN' | 'DASHBOARD' | 'USER_MANAGEMENT' | 'USER_PERMISSION_MANAGEMENT' | 'PRODUCT_MASTER' | 'DISTRIBUTOR_CONTROL' | 'PENDING_ORDERS' | 'ORDER_HISTORY' | 'PARTNER_NETWORK' | 'BALANCE_CHECK' | 'SETTINGS' | 'PROFILE' | 'ADD_DEMAND' | 'SALES_HIERARCHY' | 'UPLOAD_BALANCE' | 'REPORTS';
+export type AppState = 'LOGIN' | 'DASHBOARD' | 'USER_MANAGEMENT' | 'USER_PERMISSION_MANAGEMENT' | 'PRODUCT_MASTER' | 'DISTRIBUTOR_CONTROL' | 'PENDING_ORDERS' | 'ORDER_HISTORY' | 'PARTNER_NETWORK' | 'BALANCE_CHECK' | 'SETTINGS' | 'PROFILE' | 'ADD_DEMAND' | 'SALES_HIERARCHY' | 'UPLOAD_BALANCE' | 'REPORTS' | 'LOGISTICS_UTILITY' | 'MICRO_MASTERS';
 
 export interface User {
   id: string;
@@ -42,6 +42,8 @@ export interface UserMenuPermissions {
   access_sales_hierarchy: boolean;
   access_partner_network: boolean;
   access_system_settings: boolean;
+  access_micro_masters: boolean; // New
+  access_logistics_utility: boolean; // New
 
   // Reports
   access_dashboard: boolean; // System Overview
@@ -164,4 +166,41 @@ export interface ReportQueueItem {
   start_date: string;
   end_date: string;
   created_at: string;
+}
+
+export interface UserLoginLog {
+  login_id?: number;
+  emp_id: string;
+  user_name?: string;
+  role?: string;
+  session_id: string;
+  login_status: 'SUCCESS' | 'FAILED' | 'LOGOUT';
+  failure_reason?: string;
+  login_time?: string;
+  logout_time?: string;
+  last_activity?: string;
+  session_duration_minutes?: number;
+  ip_address?: string;
+  device_type?: string;
+  browser?: string;
+  os?: string;
+  location?: string;
+  created_at?: string;
+}
+
+export interface UserSession {
+  session_id: string;
+  emp_id: string;
+  user_name?: string;
+  role?: string;
+  login_time?: string;
+  last_activity?: string;
+  expires_at?: string;
+  is_active: boolean;
+  ip_address?: string;
+  device_type?: string;
+  browser?: string;
+  os?: string;
+  created_at?: string;
+  updated_at?: string;
 }

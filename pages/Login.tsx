@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { UserAccessMaster } from '../types';
+import { v4 as uuidv4 } from 'uuid';
 
 interface LoginProps {
-  onLogin: (user: UserAccessMaster) => void;
+  onLogin: (user: UserAccessMaster, sessionId: string) => void;
   toggleTheme: () => void;
   currentTheme: 'dark' | 'light';
 }
@@ -17,6 +18,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, toggleTheme, currentTheme }) => 
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Force Login State
+  const [showForceLogin, setShowForceLogin] = useState(false);
+  const [pendingUser, setPendingUser] = useState<UserAccessMaster | null>(null);
+
   // Forgot Password State
   const [isForgotOpen, setIsForgotOpen] = useState(false);
   const [forgotStep, setForgotStep] = useState<'VERIFY' | 'RESET'>('VERIFY');
@@ -24,15 +29,116 @@ const Login: React.FC<LoginProps> = ({ onLogin, toggleTheme, currentTheme }) => 
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetLoading, setResetLoading] = useState(false);
 
+  // Helper to log history (Audit Trail)
+  const logAttempt = async (
+    status: 'SUCCESS' | 'FAILED',
+    reason: string | null,
+    user?: UserAccessMaster,
+    inSessionId?: string
+  ) => {
+    try {
+      const userAgent = navigator.userAgent;
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
+      let ip = null;
+      try {
+        const res = await fetch('https://api.ipify.org?format=json');
+        if (res.ok) {
+          const data = await res.json();
+          ip = data.ip;
+        }
+      } catch (e) { /* Ignore */ }
+
+      await supabase.from('user_login_log').insert([{
+        emp_id: user?.emp_id || empId,
+        user_name: user?.user_name || null,
+        role: user?.role || null,
+        session_id: inSessionId || uuidv4(),
+        login_status: status,
+        failure_reason: reason,
+        device_type: isMobile ? 'Mobile' : 'Desktop',
+        browser: userAgent,
+        os: navigator.platform,
+        ip_address: ip
+      }]);
+    } catch (logErr) {
+      console.error("Failed to log login attempt:", logErr);
+    }
+  };
+
+  const createSession = async (user: UserAccessMaster, sessionId: string) => {
+    const userAgent = navigator.userAgent;
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
+    let ip = null;
+    try {
+      const res = await fetch('https://api.ipify.org?format=json');
+      if (res.ok) {
+        const data = await res.json();
+        ip = data.ip;
+      }
+    } catch (e) { /* Ignore */ }
+
+    // 50 minutes expiry
+    const expiresAt = new Date(Date.now() + 50 * 60 * 1000).toISOString();
+
+    const { error } = await supabase.from('user_sessions').insert([{
+      session_id: sessionId,
+      emp_id: user.emp_id,
+      user_name: user.user_name,
+      role: user.role,
+      is_active: true,
+      expires_at: expiresAt,
+      device_type: isMobile ? 'Mobile' : 'Desktop',
+      browser: userAgent,
+      os: navigator.platform,
+      ip_address: ip
+    }]);
+
+    if (error) throw error;
+  };
+
+  const proceedWithLogin = async (user: UserAccessMaster, force: boolean = false) => {
+    setLoading(true);
+    const newSessionId = uuidv4();
+
+    try {
+      if (force) {
+        // Deactivate all other sessions for this user
+        await supabase
+          .from('user_sessions')
+          .update({ is_active: false })
+          .eq('emp_id', user.emp_id)
+          .eq('is_active', true);
+      }
+
+      // Create new session entry
+      await createSession(user, newSessionId);
+
+      // Log History Success
+      await logAttempt('SUCCESS', force ? 'Force Login' : null, user, newSessionId);
+
+      // Complete Login
+      onLogin(user, newSessionId);
+
+    } catch (err: any) {
+      console.error("Session creation failed", err);
+      setError("Failed to create session. Please try again.");
+      await logAttempt('FAILED', `Session Creation Error: ${err.message}`, user, newSessionId);
+    } finally {
+      setLoading(false);
+      setShowForceLogin(false);
+      setPendingUser(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    try {
-      console.log('Attempting login with:', { empId });
+    const tempSessionId = uuidv4(); // For logging failures
 
-      // Query using emp_id. We fetch the user record first.
+    try {
+      // 1. Verify User Credentials
       const { data, error } = await supabase
         .from('user_access_master')
         .select('*')
@@ -40,22 +146,22 @@ const Login: React.FC<LoginProps> = ({ onLogin, toggleTheme, currentTheme }) => 
         .single();
 
       if (error || !data) {
-        console.error('Supabase error:', error);
         setError('Account not found (Invalid Employee ID).');
+        await logAttempt('FAILED', 'Invalid/Not Found Employee ID', undefined, tempSessionId);
         setLoading(false);
         return;
       }
 
-      console.log('User found:', data.user_name);
-
       if (data.password_hash !== password) {
         setError('Invalid password.');
+        await logAttempt('FAILED', 'Incorrect Password', data, tempSessionId);
         setLoading(false);
         return;
       }
 
       if (data.is_active === false) {
         setError('Account is disabled. Contact system administrator.');
+        await logAttempt('FAILED', 'Account Disabled', data, tempSessionId);
         setLoading(false);
         return;
       }
@@ -65,12 +171,13 @@ const Login: React.FC<LoginProps> = ({ onLogin, toggleTheme, currentTheme }) => 
 
       if (isAdminMode && !isAdmin) {
         setError('Access Denied: You do not have Admin privileges.');
+        await logAttempt('FAILED', 'Admin Mode Requested by Non-Admin', data, tempSessionId);
         setLoading(false);
         return;
       }
 
       // Fetch Permissions
-      const { data: permData, error: permError } = await supabase
+      const { data: permData } = await supabase
         .from('user_menu_permissions')
         .select('*')
         .eq('emp_id', empId)
@@ -81,17 +188,45 @@ const Login: React.FC<LoginProps> = ({ onLogin, toggleTheme, currentTheme }) => 
         permissions: permData || undefined
       };
 
-      // Pass full user object
-      onLogin(fullUser);
+      // 2. Check for Existing Active Session
+      const { data: activeSessions } = await supabase
+        .from('user_sessions')
+        .select('session_id')
+        .eq('emp_id', empId)
+        .eq('is_active', true);
+
+      if (activeSessions && activeSessions.length > 0) {
+        // Found active session -> Prompt Force Login
+        setPendingUser(fullUser);
+        setShowForceLogin(true);
+        setLoading(false); // Stop loading UI to show modal
+        return;
+      }
+
+      // No active session -> Proceed
+      await proceedWithLogin(fullUser, false);
 
     } catch (err: any) {
       setError(`Login failed: ${err.message || 'Unknown error'}`);
       console.error(err);
-    } finally {
+      await logAttempt('FAILED', `System Error: ${err.message}`, undefined, tempSessionId);
       setLoading(false);
     }
   };
 
+  const handleForceLoginConfirm = () => {
+    if (pendingUser) {
+      proceedWithLogin(pendingUser, true);
+    }
+  };
+
+  const handleForceLoginCancel = () => {
+    setShowForceLogin(false);
+    setPendingUser(null);
+    setError("Login cancelled. Existing session remains active.");
+  };
+
+  // Reset Password Handlers... (Keeping these logic blocks)
   const handleVerifyReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setResetLoading(true);
@@ -100,292 +235,315 @@ const Login: React.FC<LoginProps> = ({ onLogin, toggleTheme, currentTheme }) => 
     try {
       const { data, error } = await supabase
         .from('user_access_master')
-        .select('*')
+        .select('emp_id, email, mobile')
         .eq('emp_id', resetData.emp_id)
         .single();
 
       if (error || !data) {
         setResetError('Employee ID not found.');
-        setResetLoading(false);
-        return;
+      } else if (data.email?.toLowerCase() !== resetData.email.toLowerCase()) {
+        setResetError('Email does not match our records.');
+      } else {
+        setForgotStep('RESET');
       }
-
-      // Verify Email and Mobile
-      const dbEmail = (data.email || '').trim().toLowerCase();
-      const inputEmail = resetData.email.trim().toLowerCase();
-      const dbMobile = (data.mobile || '').trim();
-      const inputMobile = resetData.mobile.trim();
-
-      if (dbEmail !== inputEmail || dbMobile !== inputMobile) {
-        setResetError('Verification failed. Email or Mobile does not match our records.');
-        setResetLoading(false);
-        return;
-      }
-
-      setForgotStep('RESET');
-    } catch (err: any) {
-      console.log(err);
-      setResetError(`Verification failed: ${err.message}`);
+    } catch (err) {
+      setResetError('Verification failed.');
     } finally {
       setResetLoading(false);
     }
   };
 
-  const handlePasswordReset = async (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (resetData.new_pass !== resetData.confirm_pass) {
       setResetError('Passwords do not match.');
       return;
     }
-
     setResetLoading(true);
-    setResetError(null);
-
     try {
       const { error } = await supabase
         .from('user_access_master')
         .update({ password_hash: resetData.new_pass })
         .eq('emp_id', resetData.emp_id);
-
       if (error) throw error;
-
-      alert('Password updated successfully! Please login with your new password.');
+      alert('Password reset successful. Please login.');
       setIsForgotOpen(false);
       setForgotStep('VERIFY');
       setResetData({ emp_id: '', email: '', mobile: '', new_pass: '', confirm_pass: '' });
-    } catch (err: any) {
-      console.log(err);
-      setResetError(`Failed to update password: ${err.message}`);
+    } catch (err) {
+      setResetError('Failed to reset password.');
     } finally {
       setResetLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen w-full overflow-hidden bg-background text-primary font-sans relative transition-colors duration-300">
-      <button
-        onClick={toggleTheme}
-        className="absolute top-6 right-6 p-3 rounded-full bg-white/5 border border-white/10 text-primary hover:bg-white/10 transition-all z-20 shadow-lg backdrop-blur-sm"
-        title={`Switch to ${currentTheme === 'dark' ? 'Light' : 'Dark'} Mode`}
-      >
-        <span className="material-symbols-outlined text-xl">
-          {currentTheme === 'dark' ? 'light_mode' : 'dark_mode'}
-        </span>
-      </button>
+    <div className="min-h-screen flex w-full bg-[#050B14]">
+      {/* Left Panel - Branding */}
+      <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-[#0F1E16] to-[#050B08] p-16 relative flex-col justify-between overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-green-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-green-900/10 rounded-full blur-[100px] pointer-events-none"></div>
 
-      {/* Left Panel */}
-      <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-16 bg-cover bg-center overflow-hidden"
-        style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAZccoZV_2n7tFUUmEUrPgQymU1dCJQ40CwdTiE7iv-SO1AXUb4oGsGYxetQARFvIbDP7vgEbBHGS9JVIvvYNKca3NIKLGDj1u7m4yYw1HePlDrYMpBc83_wcl_IPLWf5EFJ9QosgVU12ANS_7CHzNfJajtccrn57ooYJnMAc9epMWrECQU4kJSdA5mAt5WAl-ZKb6RkMQ3MYVFwYUp9Ka5JJE7BHPHkA_KZZ4ReGh0rgJDKUcH9iSozhkon8wGrr_336u773ELYJc")' }}>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/90 backdrop-brightness-75"></div>
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="size-12 flex items-center justify-center border-2 border-[var(--color-secondary)] rounded-full">
-            <span className="material-symbols-outlined text-[var(--color-secondary)] text-2xl">agriculture</span>
-          </div>
-          <h2 className="text-xl font-bold tracking-widest text-white uppercase">Demand App</h2>
-        </div>
         <div className="relative z-10">
-          <h1 className="text-7xl font-display font-bold text-white leading-tight mb-4">
-            Welcome to <br />
-            <span className="text-[var(--color-secondary)]">Demand App</span>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="size-10 rounded-full border border-green-500/30 flex items-center justify-center bg-green-900/20 text-green-400">
+              <span className="material-symbols-outlined">agriculture</span>
+            </div>
+            <h2 className="text-white font-bold tracking-widest text-sm uppercase">Demand App</h2>
+          </div>
+        </div>
+
+        <div className="relative z-10">
+          <h1 className="text-6xl font-black text-white leading-tight mb-2">
+            Welcome to
           </h1>
-          <p className="text-xl text-white/80 font-light max-w-md tracking-wide leading-relaxed">
-            Precision nutrition for the future of livestock. Access your dashboard and manage cattle feed solutions with excellence.
+          <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-600 leading-tight mb-8">
+            Demand App
+          </h1>
+          <p className="text-gray-400 text-lg max-w-md font-medium leading-relaxed">
+            Precision nutrition for the future of livestock.
+            Access your dashboard and manage cattle feed solutions with excellence.
           </p>
         </div>
-        <div className="relative z-10 flex items-center gap-6 text-white/60 text-xs font-medium uppercase tracking-[0.2em]">
-          <span>Est. 2024</span>
-          <span className="w-8 h-[1px] bg-[var(--color-secondary)]/50"></span>
-          <span>Premium Industry Standards</span>
+
+        <div className="relative z-10 flex justify-between items-end border-t border-white/5 pt-8">
+          <div className="text-xs font-black tracking-[0.2em] text-gray-500 uppercase">
+            Est. 2024
+          </div>
+          <div className="text-xs font-black tracking-[0.2em] text-gray-500 uppercase">
+            Premium Industry Standards
+          </div>
         </div>
       </div>
 
-      {/* Right Panel */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative bg-[var(--bg-primary)]">
-        {/* <div className="absolute inset-0 bg-background/95 backdrop-blur-3xl z-0"></div> */}
-        <div className="w-full max-w-md relative z-10">
-          <div className="mb-12">
-            <h2 className="text-4xl font-bold text-[var(--text-primary)] mb-2">Sign In</h2>
-            <p className="text-[var(--text-secondary)]">Enter your credentials to access your account.</p>
+      {/* Right Panel - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative">
+        <div className="absolute top-8 right-8">
+          <button
+            onClick={toggleTheme}
+            className="size-10 rounded-full bg-white/5 border border-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              {currentTheme === 'dark' ? 'light_mode' : 'dark_mode'}
+            </span>
+          </button>
+        </div>
+
+        <div className="w-full max-w-md">
+          <div className="mb-10">
+            <h2 className="text-3xl font-bold text-white mb-2">Sign In</h2>
+            <p className="text-gray-500">Enter your credentials to access your account.</p>
+          </div>
+
+          <div className="mb-8 p-1 bg-white/5 rounded-lg inline-flex relative">
+            <button
+              onClick={() => setIsAdminMode(false)}
+              className={`px-8 py-2 rounded-md text-sm font-bold transition-all ${!isAdminMode ? 'bg-[#0F1522] text-white shadow-lg border border-white/5' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              User
+            </button>
+            <button
+              onClick={() => setIsAdminMode(true)}
+              className={`px-8 py-2 rounded-md text-sm font-bold transition-all ${isAdminMode ? 'bg-[#0F1522] text-white shadow-lg border border-white/5' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              Admin
+            </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="flex gap-4 p-1 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl w-fit mb-8">
-              <button
-                type="button"
-                onClick={() => setIsAdminMode(false)}
-                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${!isAdminMode ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-sm border border-[var(--border-color)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
-              >
-                User
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsAdminMode(true)}
-                className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${isAdminMode ? 'bg-[var(--color-primary)] text-white shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
-              >
-                Admin
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-2">Employee ID</label>
-                <div className="relative group">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors">badge</span>
-                  <input
-                    type="text"
-                    required
-                    value={empId}
-                    onChange={(e) => setEmpId(e.target.value)}
-                    className="w-full bg-[var(--bg-panel)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/50 transition-all placeholder-[var(--text-muted)]"
-                    placeholder="Enter your ID"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-2">Password</label>
-                <div className="relative group">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors">lock</span>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-[var(--bg-panel)] border border-[var(--border-color)] text-[var(--text-primary)] rounded-xl py-4 pl-12 pr-12 focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]/50 transition-all placeholder-[var(--text-muted)]"
-                    placeholder="Enter your password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">
-                      {showPassword ? 'visibility_off' : 'visibility'}
-                    </span>
-                  </button>
-                </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                Employee ID
+              </label>
+              <div className="relative group">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 group-focus-within:text-blue-400 transition-colors">
+                  <span className="material-symbols-outlined text-[20px]">badge</span>
+                </span>
+                <input
+                  type="text"
+                  value={empId}
+                  onChange={(e) => setEmpId(e.target.value)}
+                  placeholder="Enter your ID"
+                  className="w-full bg-[#0F1522] border border-white/5 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-600 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all"
+                />
               </div>
             </div>
+
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                Password
+              </label>
+              <div className="relative group">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 group-focus-within:text-blue-400 transition-colors">
+                  <span className="material-symbols-outlined text-[20px]">lock</span>
+                </span>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full bg-[#0F1522] border border-white/5 rounded-lg py-3 pl-10 pr-10 text-white placeholder-gray-600 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-white"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-xs font-bold flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm">error</span>
+                {error}
+              </div>
+            )}
 
             <div className="flex justify-end">
               <button
                 type="button"
                 onClick={() => setIsForgotOpen(true)}
-                className="text-xs font-medium text-[var(--color-primary)] hover:underline transition-colors"
+                className="text-xs font-bold text-blue-400 hover:text-blue-300"
               >
                 Forgot Password?
               </button>
             </div>
 
-            {error && (
-              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-medium flex items-center gap-3">
-                <span className="material-symbols-outlined">error</span>
-                {error}
-              </div>
-            )}
-
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[var(--color-primary)] hover:opacity-90 text-white font-bold py-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 group"
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-3.5 rounded-lg transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <span className="material-symbols-outlined animate-spin">sync</span>
+                <span className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
               ) : (
                 <>
                   <span>Sign In to Dashboard</span>
-                  <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                  <span className="material-symbols-outlined text-lg">arrow_forward</span>
                 </>
               )}
             </button>
           </form>
 
-          <p className="mt-8 text-center text-xs text-[var(--text-secondary)]">
-            By signing in, you agree to the <a href="#" className="text-[var(--color-primary)] hover:underline">Terms of Service</a> and <a href="#" className="text-[var(--color-primary)] hover:underline">Privacy Policy</a>
-          </p>
+          <div className="mt-12 text-center">
+            <p className="text-[10px] text-gray-600">
+              By signing in, you agree to the <span className="text-blue-400 cursor-pointer hover:underline">Terms of Service</span> and <span className="text-blue-400 cursor-pointer hover:underline">Privacy Policy</span>
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Forgot Password Modal */}
+      {/* Forgot Password Modal - Dark Themed */}
       {isForgotOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-2xl w-full max-w-md p-8 shadow-2xl relative">
-            <button
-              onClick={() => setIsForgotOpen(false)}
-              className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            >
-              <span className="material-symbols-outlined">close</span>
-            </button>
+          <div className="bg-[#111611] border border-white/10 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0a0f0a]">
+              <h3 className="font-bold text-white">Reset Password</h3>
+              <button onClick={() => { setIsForgotOpen(false); setForgotStep('VERIFY'); }} className="text-gray-500 hover:text-white">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
 
-            <h3 className="text-xl font-bold text-[var(--text-primary)] mb-2">Reset Password</h3>
-            <p className="text-[var(--text-secondary)] text-sm mb-6">
-              {forgotStep === 'VERIFY' ? 'Verify your identity to continue.' : 'Enter your new password.'}
-            </p>
-
-            {forgotStep === 'VERIFY' ? (
-              <form onSubmit={handleVerifyReset} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1">Employee ID</label>
-                  <input
-                    required
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl p-3 text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none"
-                    value={resetData.emp_id}
-                    onChange={e => setResetData({ ...resetData, emp_id: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1">Registered Email</label>
-                  <input
-                    type="email"
-                    required
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl p-3 text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none"
-                    value={resetData.email}
-                    onChange={e => setResetData({ ...resetData, email: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1">Registered Mobile</label>
-                  <input
-                    type="tel"
-                    required
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl p-3 text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none"
-                    value={resetData.mobile}
-                    onChange={e => setResetData({ ...resetData, mobile: e.target.value })}
-                  />
-                </div>
-                {resetError && <p className="text-red-500 text-xs">{resetError}</p>}
-                <button type="submit" disabled={resetLoading} className="w-full bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-bold shadow-sm">
-                  {resetLoading ? 'Verifying...' : 'Verify Identity'}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handlePasswordReset} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1">New Password</label>
+            <form onSubmit={forgotStep === 'VERIFY' ? handleVerifyReset : handleResetPassword} className="p-6 space-y-4">
+              {forgotStep === 'VERIFY' ? (
+                <>
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      placeholder="Employee ID"
+                      value={resetData.emp_id}
+                      onChange={e => setResetData({ ...resetData, emp_id: e.target.value })}
+                      className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white text-sm focus:border-blue-500/50 outline-none"
+                      required
+                    />
+                    <input
+                      type="email"
+                      placeholder="Registered Email"
+                      value={resetData.email}
+                      onChange={e => setResetData({ ...resetData, email: e.target.value })}
+                      className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white text-sm focus:border-blue-500/50 outline-none"
+                      required
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Registered Mobile (Optional)"
+                      value={resetData.mobile}
+                      onChange={e => setResetData({ ...resetData, mobile: e.target.value })}
+                      className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white text-sm focus:border-blue-500/50 outline-none"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-xs mb-4">
+                    Identity verified. Set your new password.
+                  </div>
                   <input
                     type="password"
-                    required
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl p-3 text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none"
+                    placeholder="New Password"
                     value={resetData.new_pass}
                     onChange={e => setResetData({ ...resetData, new_pass: e.target.value })}
+                    className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white text-sm focus:border-blue-500/50 outline-none"
+                    required
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-1">Confirm Password</label>
                   <input
                     type="password"
-                    required
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl p-3 text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none"
+                    placeholder="Confirm Password"
                     value={resetData.confirm_pass}
                     onChange={e => setResetData({ ...resetData, confirm_pass: e.target.value })}
+                    className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white text-sm focus:border-blue-500/50 outline-none"
+                    required
                   />
-                </div>
-                {resetError && <p className="text-red-500 text-xs">{resetError}</p>}
-                <button type="submit" disabled={resetLoading} className="w-full bg-[var(--color-primary)] hover:opacity-90 text-white py-3 rounded-xl font-bold">
-                  {resetLoading ? 'Updating...' : 'Set New Password'}
-                </button>
-              </form>
-            )}
+                </>
+              )}
+
+              {resetError && <p className="text-red-400 text-xs">{resetError}</p>}
+
+              <button
+                type="submit"
+                disabled={resetLoading}
+                className="w-full py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 transition-colors disabled:opacity-50"
+              >
+                {resetLoading ? 'Processing...' : (forgotStep === 'VERIFY' ? 'Verify Identity' : 'Reset Password')}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Force Login Confirmation Modal */}
+      {showForceLogin && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#111611] border border-white/10 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div className="p-6 text-center">
+              <div className="size-14 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-yellow-500/20">
+                <span className="material-symbols-outlined text-3xl text-yellow-500">warning</span>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Active Session Detected</h3>
+              <p className="text-sm text-gray-400">
+                You are already logged in on another device. Do you want to force login here? This will log you out from the other device.
+              </p>
+            </div>
+
+            <div className="p-4 border-t border-white/5 bg-black/20 flex gap-3">
+              <button
+                onClick={handleForceLoginCancel}
+                className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all font-bold text-xs uppercase tracking-wider"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleForceLoginConfirm}
+                className="flex-1 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black shadow-lg shadow-yellow-500/20 transition-all font-bold text-xs uppercase tracking-wider"
+              >
+                Force Login
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -38,6 +38,8 @@ const UserPermissionManagement: React.FC<UserPermissionManagementProps> = () => 
         access_report_user_roles: false,
         access_new_demand: false,
         access_upload_balance: false,
+        access_micro_masters: false,
+        access_logistics_utility: false,
     };
 
     const [currentPermissions, setCurrentPermissions] = useState<UserMenuPermissions>(defaultPermissions);
@@ -139,7 +141,7 @@ const UserPermissionManagement: React.FC<UserPermissionManagementProps> = () => 
 
             if (permError) throw permError;
 
-            console.log('Saving permissions for', selectedUser.emp_id, currentPermissions);
+
 
             // Optimistically update local state
             setUsers(prev => prev.map(u =>
@@ -167,9 +169,9 @@ const UserPermissionManagement: React.FC<UserPermissionManagementProps> = () => 
     );
 
     return (
-        <div className="flex h-full gap-6">
+        <div className="flex flex-col md:flex-row h-full gap-6 overflow-hidden md:overflow-visible">
             {/* Left Panel: User List */}
-            <div className="w-1/3 bg-[var(--bg-panel)] rounded-3xl border border-[var(--border-color)] flex flex-col overflow-hidden shadow-2xl backdrop-blur-xl">
+            <div className="w-full md:w-1/3 h-72 md:h-auto bg-[var(--bg-panel)] rounded-3xl border border-[var(--border-color)] flex flex-col overflow-hidden shadow-2xl backdrop-blur-xl shrink-0">
                 <div className="p-6 border-b border-white/5 bg-gradient-to-r from-forest-900/30 to-transparent">
                     <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                         <span className="material-symbols-outlined text-gold-400">group</span>
@@ -219,7 +221,7 @@ const UserPermissionManagement: React.FC<UserPermissionManagementProps> = () => 
             </div>
 
             {/* Right Panel: Permissions Matrix */}
-            <div className="flex-1 bg-[var(--bg-panel)] rounded-3xl border border-[var(--border-color)] flex flex-col overflow-hidden shadow-2xl backdrop-blur-xl">
+            <div className="flex-1 bg-[var(--bg-panel)] rounded-3xl border border-[var(--border-color)] flex flex-col overflow-hidden shadow-2xl backdrop-blur-xl min-h-0">
                 {selectedUser ? (
                     <>
                         <div className="p-6 border-b border-white/5 bg-gradient-to-r from-forest-900/30 to-transparent flex justify-between items-center">
@@ -300,6 +302,12 @@ const UserPermissionManagement: React.FC<UserPermissionManagementProps> = () => 
                                             checked={currentPermissions.access_partner_network}
                                             onChange={() => handlePermissionChange('access_partner_network')}
                                             icon="handshake"
+                                        />
+                                        <PermissionToggle
+                                            label="Micro Masters (Coming Soon)"
+                                            checked={currentPermissions.access_micro_masters}
+                                            onChange={() => handlePermissionChange('access_micro_masters')}
+                                            icon="science"
                                         />
                                     </div>
                                 </div>
@@ -423,6 +431,25 @@ const UserPermissionManagement: React.FC<UserPermissionManagementProps> = () => 
                                             checked={currentPermissions.access_upload_balance}
                                             onChange={() => handlePermissionChange('access_upload_balance')}
                                             icon="upload_file"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* 5. LOGISTICS (NEW) */}
+                                <div className="bg-white/5 rounded-2xl p-6 border border-white/5 hover:border-white/10 transition-colors">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="p-2 bg-indigo-500/20 rounded-lg">
+                                            <span className="material-symbols-outlined text-indigo-400">local_shipping</span>
+                                        </div>
+                                        <h3 className="text-lg font-bold text-white">Logistics & Supply Chain</h3>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <PermissionToggle
+                                            label="Logistics Utility"
+                                            checked={currentPermissions.access_logistics_utility}
+                                            onChange={() => handlePermissionChange('access_logistics_utility')}
+                                            icon="rv_hookup"
                                         />
                                     </div>
                                 </div>

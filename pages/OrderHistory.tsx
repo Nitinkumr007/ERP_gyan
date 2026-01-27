@@ -91,7 +91,7 @@ const OrderHistory: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn h-full flex flex-col pb-20">
-      <div className="flex items-center justify-between shrink-0">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between shrink-0 gap-4">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-[var(--bg-panel)] rounded-2xl border border-[var(--border-color)] shadow-sm">
             <span className="material-symbols-outlined text-[var(--color-primary)] text-3xl">history</span>
@@ -105,23 +105,23 @@ const OrderHistory: React.FC = () => {
         </div>
 
         {/* Date Range Filter */}
-        <div className="flex items-center gap-2 bg-[var(--bg-panel)] border border-[var(--border-color)] p-2 rounded-xl shadow-sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-[var(--bg-panel)] border border-[var(--border-color)] p-2 rounded-xl shadow-sm w-full md:w-auto">
           <input
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-3 py-1.5 text-xs text-[var(--text-primary)] outline-none"
+            className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-3 py-1.5 text-xs text-[var(--text-primary)] outline-none w-full sm:w-auto"
           />
-          <span className="text-[var(--text-muted)]">-</span>
+          <span className="text-[var(--text-muted)] text-center hidden sm:block">-</span>
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-3 py-1.5 text-xs text-[var(--text-primary)] outline-none"
+            className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-3 py-1.5 text-xs text-[var(--text-primary)] outline-none w-full sm:w-auto"
           />
           <button
             onClick={fetchHistory}
-            className="size-8 flex items-center justify-center bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 transition-all"
+            className="size-8 flex items-center justify-center bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 transition-all w-full sm:w-8 mt-2 sm:mt-0"
           >
             <span className="material-symbols-outlined text-sm">filter_list</span>
           </button>

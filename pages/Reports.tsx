@@ -226,7 +226,7 @@ const Reports: React.FC<ReportsProps> = ({ currentUser }) => {
     });
 
     const handleRequestReport = async (reportId: string) => {
-        console.log("Requesting report:", reportId);
+
 
         if (!currentUser?.emp_id) {
             console.error("No emp_id found for user");
@@ -262,7 +262,7 @@ const Reports: React.FC<ReportsProps> = ({ currentUser }) => {
         setRequests(prev => [optimisticItem, ...prev].slice(0, PAGE_SIZE));
 
         try {
-            console.log("Inserting into report_queue...");
+
             const { data, error } = await supabase.from('report_queue').insert([{
                 emp_id: currentUser.emp_id,
                 user_name: currentUser.user_name || 'Unknown',
@@ -278,7 +278,7 @@ const Reports: React.FC<ReportsProps> = ({ currentUser }) => {
                 throw error;
             }
 
-            console.log("Insert success:", data);
+
 
             // Sync with real DB data
             setPage(0);

@@ -278,7 +278,7 @@ const DistributorMasterPage: React.FC = () => {
   return (
     <div className="flex flex-col h-full space-y-4 animate-fadeIn">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 bg-[var(--bg-panel)] rounded-2xl border border-[var(--border-color)] shadow-sm backdrop-blur-md transition-colors duration-300">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between p-6 bg-[var(--bg-panel)] rounded-2xl border border-[var(--border-color)] shadow-sm backdrop-blur-md transition-colors duration-300 gap-4">
         <div className="flex items-center gap-4">
           <div className="size-10 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center border border-[var(--color-primary)]/20 text-[var(--color-primary)] shadow-sm">
             <span className="material-symbols-outlined">storefront</span>
@@ -289,103 +289,105 @@ const DistributorMasterPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative group">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          <div className="relative group w-full md:w-auto">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors">search</span>
             <input
               type="text"
               placeholder="Global Search..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl py-2.5 pl-10 pr-4 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--color-primary)] w-64 transition-all placeholder-[var(--text-muted)]"
+              className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl py-2.5 pl-10 pr-4 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--color-primary)] w-full md:w-64 transition-all placeholder-[var(--text-muted)]"
             />
           </div>
-          <button
-            onClick={fetchDistributors}
-            className="p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
-          >
-            <span className="material-symbols-outlined text-[20px]">refresh</span>
-          </button>
-          <button
-            onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] hover:opacity-90 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg hover:shadow-blue-500/20"
-          >
-            <span className="material-symbols-outlined text-[18px]">add_business</span>
-            New Distributor
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchDistributors}
+              className="p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">refresh</span>
+            </button>
+            <button
+              onClick={handleOpenAdd}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] hover:opacity-90 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg hover:shadow-blue-500/20"
+            >
+              <span className="material-symbols-outlined text-[18px]">add_business</span>
+              New Distributor
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Table */}
-      <div className="flex-1 bg-[var(--bg-panel)] rounded-2xl border border-[var(--border-color)] backdrop-blur-md overflow-hidden flex flex-col shadow-sm">
+      <div className="flex-1 bg-[var(--bg-panel)] rounded-xl border border-[var(--border-color)] backdrop-blur-md overflow-hidden flex flex-col shadow-sm">
         <div className="overflow-auto custom-scrollbar flex-1">
-          <table className="w-full text-left border-collapse min-w-[1200px]">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead className="sticky top-0 z-10 bg-[var(--bg-panel)] border-b border-[var(--border-color)] backdrop-blur-xl">
-              <tr className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                <th className="px-6 py-4">DB ID</th>
-                <th className="px-6 py-4">Distributor Name</th>
-                <th className="px-6 py-4">Location</th>
-                <th className="px-6 py-4">Sales Team</th>
-                <th className="px-6 py-4">Contact</th>
-                <th className="px-6 py-4">Closing Bal</th>
-                <th className="px-6 py-4 text-center">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+              <tr className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                <th className="px-3 py-2 w-16">ID</th>
+                <th className="px-3 py-2">Distributor</th>
+                <th className="px-3 py-2">Location</th>
+                <th className="px-3 py-2">Sales Team</th>
+                <th className="px-3 py-2">Contact</th>
+                <th className="px-3 py-2 text-right">Balance</th>
+                <th className="px-3 py-2 text-center">Status</th>
+                <th className="px-3 py-2 text-right w-20">Actions</th>
               </tr>
               {/* Filter Row */}
               <tr className="bg-[var(--bg-secondary)] border-b border-[var(--border-color)]">
-                <th className="px-4 py-2">
+                <th className="px-2 py-1">
                   <input
-                    placeholder="Filter ID"
+                    placeholder="ID"
                     value={filters.dbId}
                     onChange={e => handleFilterChange('dbId', e.target.value)}
-                    className="w-24 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
                   />
                 </th>
-                <th className="px-4 py-2">
+                <th className="px-2 py-1">
                   <input
-                    placeholder="Filter Name..."
+                    placeholder="Name / Alias..."
                     value={filters.distributorName}
                     onChange={e => handleFilterChange('distributorName', e.target.value)}
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
                   />
                 </th>
-                <th className="px-4 py-2">
+                <th className="px-2 py-1">
                   <input
-                    placeholder="Region/Dist..."
+                    placeholder="Region..."
                     value={filters.location}
                     onChange={e => handleFilterChange('location', e.target.value)}
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
                   />
                 </th>
-                <th className="px-4 py-2">
+                <th className="px-2 py-1">
                   <input
-                    placeholder="RSM/ASM..."
+                    placeholder="Sales..."
                     value={filters.sales}
                     onChange={e => handleFilterChange('sales', e.target.value)}
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
                   />
                 </th>
-                <th className="px-4 py-2">
+                <th className="px-2 py-1">
                   <input
-                    placeholder="Mobile/GST..."
+                    placeholder="Mobile..."
                     value={filters.contact}
                     onChange={e => handleFilterChange('contact', e.target.value)}
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
                   />
                 </th>
-                <th className="px-4 py-2"></th>
-                <th className="px-4 py-2 text-center">
+                <th className="px-2 py-1"></th>
+                <th className="px-2 py-1 text-center">
                   <input
-                    placeholder="Status"
+                    placeholder="St"
                     value={filters.status}
                     onChange={e => handleFilterChange('status', e.target.value)}
-                    className="w-16 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none text-center placeholder-[var(--text-muted)]"
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none text-center placeholder-[var(--text-muted)]"
                   />
                 </th>
-                <th className="px-4 py-2"></th>
+                <th className="px-2 py-1"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--border-color)] text-sm">
+            <tbody className="divide-y divide-[var(--border-color)] text-xs">
               {loading ? (
                 <tr><td colSpan={8} className="p-8 text-center text-[var(--text-muted)]">Loading distributor network...</td></tr>
               ) : filteredDistributors.length === 0 ? (
@@ -393,52 +395,54 @@ const DistributorMasterPage: React.FC = () => {
               ) : (
                 filteredDistributors.map(dist => (
                   <tr key={dist.dbId} className="hover:bg-[var(--bg-secondary)] transition-colors group">
-                    <td className="px-6 py-4 font-mono text-[var(--text-muted)] text-xs">
+                    <td className="px-3 py-2 font-mono text-[var(--text-muted)] font-bold">
                       {dist.dbId}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-[var(--text-primary)]">{dist.distributorName}</div>
-                      <div className="text-xs text-[var(--text-secondary)]">{dist.dbName}</div>
+                    <td className="px-3 py-2">
+                      <div className="font-bold text-[var(--text-primary)] truncate max-w-[200px]" title={dist.distributorName}>{dist.distributorName}</div>
+                      <div className="text-[10px] text-[var(--text-secondary)] truncate max-w-[200px]">{dist.dbName}</div>
                     </td>
-                    <td className="px-6 py-4 text-[var(--text-secondary)] text-xs">
-                      <div>{dist.district}, {dist.region}</div>
-                      <div className="text-[var(--text-muted)]">{dist.plant}</div>
+                    <td className="px-3 py-2 text-[var(--text-secondary)]">
+                      <div className="font-medium text-[var(--text-primary)]">{dist.district}</div>
+                      <div className="text-[10px] opacity-70">{dist.region} • {dist.plant}</div>
                     </td>
-                    <td className="px-6 py-4 text-xs text-[var(--text-secondary)]">
-                      <div><span className="text-[var(--text-muted)]">RSM:</span> {dist.rsm}</div>
-                      <div><span className="text-[var(--text-muted)]">ASM:</span> {dist.asm}</div>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-col gap-0.5">
+                        {dist.rsm && <span className="inline-flex items-center gap-1 text-[10px] bg-blue-500/5 text-blue-600 px-1.5 py-0.5 rounded border border-blue-500/10 w-fit whitespace-nowrap"><span className="opacity-50">RSM:</span> {dist.rsm}</span>}
+                        {dist.asm && <span className="inline-flex items-center gap-1 text-[10px] bg-purple-500/5 text-purple-600 px-1.5 py-0.5 rounded border border-purple-500/10 w-fit whitespace-nowrap"><span className="opacity-50">ASM:</span> {dist.asm}</span>}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-xs text-[var(--text-secondary)] font-mono">
+                    <td className="px-3 py-2 font-mono text-[10px] text-[var(--text-secondary)]">
                       <div>{dist.mobile1}</div>
-                      <div className="text-[var(--text-muted)]">{dist.gst}</div>
+                      {dist.gst && <div className="text-[9px] opacity-60">GST: {dist.gst}</div>}
                     </td>
-                    <td className="px-6 py-4 text-xs text-right font-mono font-bold text-[var(--text-primary)]">
+                    <td className="px-3 py-2 text-right font-mono font-bold text-[var(--text-primary)]">
                       ₹{(dist.closing_balance || 0).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${dist.status === 'Active'
-                        ? 'bg-green-500/10 text-green-600 border-green-500/20'
-                        : 'bg-red-500/10 text-red-600 border-red-500/20'
+                    <td className="px-3 py-2 text-center">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border ${dist.status === 'Active'
+                        ? 'bg-green-500/5 text-green-600 border-green-500/20'
+                        : 'bg-red-500/5 text-red-600 border-red-500/20'
                         }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${dist.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                        {dist.status}
+                        <span className={`size-1 rounded-full ${dist.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                        {dist.status === 'Active' ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <td className="px-3 py-2 text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleOpenEdit(dist)}
-                          className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-500/20 transition-all"
+                          className="size-6 flex items-center justify-center rounded bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-500/20 transition-all"
                           title="Edit"
                         >
-                          <span className="material-symbols-outlined text-[16px]">edit</span>
+                          <span className="material-symbols-outlined text-[14px]">edit</span>
                         </button>
                         <button
                           onClick={() => handleDelete(dist.dbId)}
-                          className="p-1.5 rounded-lg bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-500/20 transition-all"
+                          className="size-6 flex items-center justify-center rounded bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-500/20 transition-all"
                           title="Delete"
                         >
-                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                          <span className="material-symbols-outlined text-[14px]">delete</span>
                         </button>
                       </div>
                     </td>

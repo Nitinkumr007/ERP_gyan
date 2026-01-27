@@ -1,0 +1,65 @@
+import { AppState } from './types';
+
+export const PAGE_TITLES: Record<AppState, string> = {
+    DASHBOARD: 'Admin Control Center',
+    USER_MANAGEMENT: 'User Master Management',
+    PRODUCT_MASTER: 'Product Master Management', // Note: Header had logic for Admin vs User title, we might need a function or just generic
+    DISTRIBUTOR_CONTROL: 'Distributor Master',
+    PENDING_ORDERS: 'Pending Orders Hub',
+    ORDER_HISTORY: 'Order History',
+    PARTNER_NETWORK: 'Partner Network',
+    BALANCE_CHECK: 'DBR Balance Check',
+    SETTINGS: 'System Configuration',
+    LOGIN: 'Login',
+    PROFILE: 'My Profile',
+    USER_PERMISSION_MANAGEMENT: 'User Access Control',
+    ADD_DEMAND: 'New Demand Creation',
+    SALES_HIERARCHY: 'Sales Hierarchy',
+    UPLOAD_BALANCE: 'Balance Upload',
+    REPORTS: 'Reports Center',
+    LOGISTICS_UTILITY: 'Logistics Utility',
+    MICRO_MASTERS: 'Micro Masters',
+};
+
+// Subtitles can be imported similarly
+export const PAGE_SUBTITLES: Record<AppState, string> = {
+    DASHBOARD: 'System Status: Operational',
+    USER_MANAGEMENT: 'Administration / User Master',
+    PRODUCT_MASTER: 'Configure global catalog',
+    DISTRIBUTOR_CONTROL: 'Administration / Master List',
+    PENDING_ORDERS: 'Review and authorize distribution network',
+    ORDER_HISTORY: 'Track and manage past distributions',
+    PARTNER_NETWORK: 'Connect and manage key relationships',
+    BALANCE_CHECK: 'Financial Overview',
+    SETTINGS: 'Configure global rules and preferences',
+    LOGIN: '',
+    PROFILE: 'Account Settings & Security',
+    USER_PERMISSION_MANAGEMENT: 'Manage user permissions and access levels',
+    ADD_DEMAND: 'Create and submit new demand requests',
+    SALES_HIERARCHY: 'Manage sales territory structure',
+    UPLOAD_BALANCE: 'Upload and verify distributor balances',
+    REPORTS: 'Operational and Master Data Reports',
+    LOGISTICS_UTILITY: 'Manage fleet and dispatch logistics',
+    MICRO_MASTERS: 'Manage micro-level master data',
+};
+
+export const PAGE_ICONS: Record<AppState, string> = {
+    DASHBOARD: 'dashboard',
+    USER_MANAGEMENT: 'group',
+    PRODUCT_MASTER: 'inventory_2',
+    DISTRIBUTOR_CONTROL: 'hub',
+    PENDING_ORDERS: 'pending_actions',
+    ORDER_HISTORY: 'history',
+    PARTNER_NETWORK: 'handshake',
+    BALANCE_CHECK: 'account_balance_wallet',
+    SETTINGS: 'settings',
+    LOGIN: 'login',
+    PROFILE: 'person',
+    USER_PERMISSION_MANAGEMENT: 'lock_person',
+    ADD_DEMAND: 'add_shopping_cart',
+    SALES_HIERARCHY: 'account_tree',
+    UPLOAD_BALANCE: 'upload_file',
+    REPORTS: 'download',
+    LOGISTICS_UTILITY: 'local_shipping',
+    MICRO_MASTERS: 'dataset',
+};

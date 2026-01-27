@@ -132,7 +132,8 @@ const ProductMasterPage: React.FC = () => {
   return (
     <div className="flex flex-col h-full space-y-4 animate-fadeIn">
       {/* Header / Toolbar */}
-      <div className="flex items-center justify-between p-6 bg-[var(--bg-panel)] rounded-2xl border border-[var(--border-color)] shadow-sm backdrop-blur-md transition-colors duration-300">
+      {/* Header / Toolbar */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between p-6 bg-[var(--bg-panel)] rounded-2xl border border-[var(--border-color)] shadow-sm backdrop-blur-md transition-colors duration-300 gap-4">
         <div className="flex items-center gap-4">
           <div className="size-10 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center border border-[var(--color-primary)]/20 text-[var(--color-primary)] shadow-sm">
             <span className="material-symbols-outlined">inventory_2</span>
@@ -143,30 +144,32 @@ const ProductMasterPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative group">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          <div className="relative group w-full md:w-auto">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors">search</span>
             <input
               type="text"
               placeholder="Search products..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl py-2.5 pl-10 pr-4 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--color-primary)] w-64 transition-all placeholder-[var(--text-muted)]"
+              className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl py-2.5 pl-10 pr-4 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--color-primary)] w-full md:w-64 transition-all placeholder-[var(--text-muted)]"
             />
           </div>
-          <button
-            onClick={fetchProducts}
-            className="p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
-          >
-            <span className="material-symbols-outlined text-[20px]">refresh</span>
-          </button>
-          <button
-            onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] hover:opacity-90 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg hover:shadow-blue-500/20"
-          >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            Add Product
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchProducts}
+              className="p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">refresh</span>
+            </button>
+            <button
+              onClick={handleOpenAdd}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] hover:opacity-90 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg hover:shadow-blue-500/20"
+            >
+              <span className="material-symbols-outlined text-[18px]">add</span>
+              Add Product
+            </button>
+          </div>
         </div>
       </div>
 

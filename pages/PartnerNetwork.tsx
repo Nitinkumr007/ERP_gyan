@@ -107,65 +107,58 @@ const PartnerNetwork: React.FC = () => {
               <button onClick={fetchPartners} className="px-6 py-2 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl text-[10px] font-black uppercase text-[var(--text-primary)] hover:bg-[var(--border-color)]">Retry Connection</button>
             </div>
           ) : (
-            <table className="w-full border-collapse">
+            <table className="w-full border-collapse min-w-[800px]">
               <thead>
                 <tr className="text-left border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
-                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Partner Node</th>
-                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Zone / District</th>
-                  <th className="px-10 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Entity Identity</th>
-                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Production Link</th>
-                  <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Network Status</th>
-                  <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">Profile</th>
+                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.1em] text-[var(--text-secondary)]">Partner Entity</th>
+                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.1em] text-[var(--text-secondary)]">Zone / District</th>
+                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.1em] text-[var(--text-secondary)]">Network Status</th>
+                  <th className="px-4 py-3 text-right text-[9px] font-black uppercase tracking-[0.1em] text-[var(--text-secondary)]">Action</th>
                 </tr>
               </thead>
-              <tbody className="text-sm">
+              <tbody className="text-xs">
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      <td className="px-8 py-6"><div className="w-40 h-8 bg-[var(--bg-secondary)] rounded-lg"></div></td>
-                      <td className="px-8 py-6"><div className="w-32 h-6 bg-[var(--bg-secondary)] rounded-lg"></div></td>
-                      <td className="px-8 py-6"><div className="w-48 h-6 bg-[var(--bg-secondary)] rounded-lg"></div></td>
-                      <td className="px-8 py-6"><div className="w-32 h-6 bg-[var(--bg-secondary)] rounded-lg"></div></td>
-                      <td className="px-8 py-6"><div className="w-20 h-6 bg-[var(--bg-secondary)] rounded-full"></div></td>
-                      <td className="px-8 py-6"><div className="ml-auto size-10 bg-[var(--bg-secondary)] rounded-xl"></div></td>
+                      <td className="px-4 py-3"><div className="w-40 h-6 bg-[var(--bg-secondary)] rounded-lg"></div></td>
+                      <td className="px-4 py-3"><div className="w-32 h-6 bg-[var(--bg-secondary)] rounded-lg"></div></td>
+                      <td className="px-4 py-3"><div className="w-20 h-6 bg-[var(--bg-secondary)] rounded-full"></div></td>
+                      <td className="px-4 py-3"><div className="ml-auto size-8 bg-[var(--bg-secondary)] rounded-lg"></div></td>
                     </tr>
                   ))
                 ) : filtered.map((p) => (
                   <tr key={p.dbId} className="hover:bg-[var(--bg-secondary)] border-b border-[var(--border-color)] transition-colors group">
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-4">
-                        <div className="size-10 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] flex items-center justify-center text-[var(--color-primary)] font-black shadow-sm">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="size-8 rounded bg-[var(--bg-primary)] border border-[var(--border-color)] flex items-center justify-center text-[var(--color-primary)] font-black shadow-sm text-xs">
                           {p.dbName.slice(0, 2).toUpperCase() || 'DB'}
                         </div>
                         <div>
-                          <span className="font-bold text-[var(--text-primary)] tracking-tight block">{p.dbName}</span>
-                          <span className="text-[9px] text-[var(--text-muted)] font-black uppercase tracking-widest mt-0.5">ID: {p.dbId}</span>
+                          <div className="font-bold text-[var(--text-primary)]">{p.dbName}</div>
+                          <div className="text-[10px] text-[var(--text-secondary)] truncate max-w-[200px]">{p.distributorName}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 py-3">
                       <div className="flex flex-col">
-                        <span className="text-[var(--text-primary)] font-bold">{p.region}</span>
-                        <span className="text-[10px] text-[var(--text-muted)] font-medium">{p.district}</span>
+                        <span className="text-[var(--text-primary)] font-medium">{p.region}</span>
+                        <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)]">
+                          <span>{p.district}</span>
+                          <span>•</span>
+                          <span className="text-blue-500">{p.plant || 'Global'}</span>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-10 py-6">
-                      <span className="text-[var(--text-secondary)] font-medium italic block truncate max-w-[200px]">{p.distributorName}</span>
-                    </td>
-                    <td className="px-8 py-6">
-                      <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-500">
-                        {p.plant || 'Global Hub'}
-                      </span>
-                    </td>
-                    <td className="px-8 py-6">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${p.status === 'Active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border ${p.status === 'Active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
                         }`}>
+                        <span className={`size-1.5 rounded-full ${p.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`}></span>
                         {p.status}
                       </span>
                     </td>
-                    <td className="px-8 py-6 text-right">
-                      <button className="size-10 flex items-center justify-center ml-auto bg-[var(--bg-primary)] hover:bg-[var(--color-primary)] hover:text-white border border-[var(--border-color)] rounded-xl transition-all text-[var(--text-secondary)]">
-                        <span className="material-symbols-outlined text-xl">contact_page</span>
+                    <td className="px-4 py-3 text-right">
+                      <button className="size-8 flex items-center justify-center ml-auto bg-[var(--bg-primary)] hover:bg-[var(--color-primary)] hover:text-white border border-[var(--border-color)] rounded transition-all text-[var(--text-secondary)]">
+                        <span className="material-symbols-outlined text-[16px]">visibility</span>
                       </button>
                     </td>
                   </tr>

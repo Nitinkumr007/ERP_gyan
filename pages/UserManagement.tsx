@@ -157,7 +157,7 @@ const UserManagementPage: React.FC<UserManagementProps> = ({ onNavigate }) => {
   return (
     <div className="flex flex-col h-full space-y-4 animate-fadeIn">
       {/* Header / Toolbar */}
-      <div className="flex items-center justify-between p-6 bg-[var(--bg-panel)] rounded-2xl border border-[var(--border-color)] shadow-sm backdrop-blur-md transition-colors duration-300">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between p-6 bg-[var(--bg-panel)] rounded-2xl border border-[var(--border-color)] shadow-sm backdrop-blur-md transition-colors duration-300 gap-4">
         <div className="flex items-center gap-4">
           <div className="size-10 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center border border-[var(--color-primary)]/20 text-[var(--color-primary)] shadow-sm">
             <span className="material-symbols-outlined">group</span>
@@ -168,77 +168,69 @@ const UserManagementPage: React.FC<UserManagementProps> = ({ onNavigate }) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative group">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          <div className="relative group w-full md:w-auto">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors">search</span>
             <input
               type="text"
               placeholder="Search users..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl py-2.5 pl-10 pr-4 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--color-primary)] w-64 transition-all placeholder-[var(--text-muted)]"
+              className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl py-2.5 pl-10 pr-4 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--color-primary)] w-full md:w-64 transition-all placeholder-[var(--text-muted)]"
             />
           </div>
-          <button
-            onClick={fetchUsers}
-            className="p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
-          >
-            <span className="material-symbols-outlined text-[20px]">refresh</span>
-          </button>
-          <button
-            onClick={() => onNavigate('SALES_HIERARCHY')}
-            className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] font-bold text-xs uppercase tracking-wide rounded-xl transition-all"
-          >
-            <span className="material-symbols-outlined text-[18px]">account_tree</span>
-            Map Hierarchy
-          </button>
-          <button
-            onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] hover:opacity-90 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20"
-          >
-            <span className="material-symbols-outlined text-[18px]">person_add</span>
-            Add User
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={fetchUsers}
+              className="p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">refresh</span>
+            </button>
+            <button
+              onClick={() => onNavigate('SALES_HIERARCHY')}
+              className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] font-bold text-xs uppercase tracking-wide rounded-xl transition-all"
+            >
+              <span className="material-symbols-outlined text-[18px]">account_tree</span>
+              Map Hierarchy
+            </button>
+            <button
+              onClick={handleOpenAdd}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] hover:opacity-90 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg hover:shadow-emerald-500/20"
+            >
+              <span className="material-symbols-outlined text-[18px]">person_add</span>
+              Add User
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Table Area */}
       <div className="flex-1 bg-[var(--bg-panel)] rounded-2xl border border-[var(--border-color)] backdrop-blur-md overflow-hidden flex flex-col shadow-sm">
         <div className="overflow-auto custom-scrollbar flex-1">
-          <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 z-10 bg-[var(--bg-panel)] border-b border-[var(--border-color)] text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider backdrop-blur-xl">
-              <tr className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                <th className="px-6 py-4">User Name</th>
-                <th className="px-6 py-4">Emp ID</th>
-                <th className="px-6 py-4">Role</th>
-                <th className="px-6 py-4">Designation</th>
-                <th className="px-6 py-4">Contacts</th>
-                <th className="px-6 py-4 text-center">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+          <table className="w-full text-left border-collapse min-w-[900px]">
+            <thead className="sticky top-0 z-10 bg-[var(--bg-panel)] border-b border-[var(--border-color)] backdrop-blur-xl">
+              <tr className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                <th className="px-4 py-3">User Profile</th>
+                <th className="px-4 py-3">Role & Designation</th>
+                <th className="px-4 py-3">Contact Access</th>
+                <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
               {/* Filter Row */}
               <tr className="bg-[var(--bg-secondary)] border-b border-[var(--border-color)]">
-                <th className="px-4 py-2">
+                <th className="px-2 py-1">
                   <input
-                    placeholder="Filter Name..."
+                    placeholder="Search User / ID..."
                     value={filters.userName}
                     onChange={e => handleFilterChange('userName', e.target.value)}
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
                   />
                 </th>
-                <th className="px-4 py-2">
-                  <input
-                    placeholder="Filter ID..."
-                    value={filters.empId}
-                    onChange={e => handleFilterChange('empId', e.target.value)}
-                    className="w-24 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
-                  />
-                </th>
-                <th className="px-4 py-2">
+                <th className="px-2 py-1">
                   <select
                     value={filters.role}
                     onChange={e => handleFilterChange('role', e.target.value)}
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none appearance-none"
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none appearance-none"
                   >
                     <option value="">All Roles</option>
                     <option value="Admin">Admin</option>
@@ -247,79 +239,83 @@ const UserManagementPage: React.FC<UserManagementProps> = ({ onNavigate }) => {
                     <option value="Distributor">Distributor</option>
                   </select>
                 </th>
-                <th className="px-4 py-2"></th>
-                <th className="px-4 py-2">
+                <th className="px-2 py-1">
                   <input
                     placeholder="Email/Mobile..."
                     value={filters.contact}
                     onChange={e => handleFilterChange('contact', e.target.value)}
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
+                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none placeholder-[var(--text-muted)]"
                   />
                 </th>
-                <th className="px-4 py-2 text-center">
+                <th className="px-2 py-1 text-center">
                   <input
-                    placeholder="Status"
+                    placeholder="St"
                     value={filters.status}
                     onChange={e => handleFilterChange('status', e.target.value)}
-                    className="w-16 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none text-center placeholder-[var(--text-muted)]"
+                    className="w-12 mx-auto bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1 text-[10px] text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none text-center placeholder-[var(--text-muted)]"
                   />
                 </th>
-                <th className="px-4 py-2"></th>
+                <th className="px-2 py-1"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--border-color)] text-sm">
+            <tbody className="divide-y divide-[var(--border-color)] text-xs">
               {loading ? (
-                <tr><td colSpan={7} className="p-8 text-center text-[var(--text-muted)]">Loading users...</td></tr>
+                <tr><td colSpan={5} className="p-8 text-center text-[var(--text-muted)]">Loading users...</td></tr>
               ) : filteredUsers.length === 0 ? (
-                <tr><td colSpan={7} className="p-8 text-center text-[var(--text-muted)]">No users found.</td></tr>
+                <tr><td colSpan={5} className="p-8 text-center text-[var(--text-muted)]">No users found.</td></tr>
               ) : (
                 filteredUsers.map(user => (
                   <tr key={user.user_id} className="hover:bg-[var(--bg-secondary)] transition-colors group">
-                    <td className="px-6 py-4 font-semibold text-[var(--text-primary)]">
-                      {user.user_name}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="size-8 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center font-bold text-xs border border-[var(--color-primary)]/20">
+                          {user.user_name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-bold text-[var(--text-primary)]">{user.user_name}</div>
+                          <div className="text-[10px] font-mono text-[var(--text-secondary)] opacity-80">{user.emp_id}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 font-mono text-[var(--text-secondary)] text-xs">
-                      {user.emp_id}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col items-start gap-1">
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${user.role === 'Admin'
+                          ? 'bg-purple-500/10 text-purple-600 border-purple-500/20'
+                          : 'bg-blue-500/10 text-blue-600 border-blue-500/20'
+                          }`}>
+                          {user.role}
+                        </span>
+                        <span className="text-[10px] text-[var(--text-secondary)]">{user.emp_designation || '-'}</span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${user.role === 'Admin'
-                        ? 'bg-purple-500/10 text-purple-600 border-purple-500/20'
-                        : 'bg-blue-500/10 text-blue-600 border-blue-500/20'
-                        }`}>
-                        {user.role}
-                      </span>
+                    <td className="px-4 py-3 text-[10px] text-[var(--text-secondary)] space-y-0.5">
+                      <div className="flex items-center gap-1"><span className="material-symbols-outlined text-[12px] opacity-50">mail</span> {user.email || '-'}</div>
+                      <div className="flex items-center gap-1"><span className="material-symbols-outlined text-[12px] opacity-50">call</span> {user.mobile || '-'}</div>
                     </td>
-                    <td className="px-6 py-4 text-[var(--text-secondary)]">
-                      {user.emp_designation || '-'}
-                    </td>
-                    <td className="px-6 py-4 text-xs text-[var(--text-secondary)]">
-                      <div><span className="text-[var(--text-muted)]">E:</span> {user.email}</div>
-                      <div><span className="text-[var(--text-muted)]">M:</span> {user.mobile}</div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${user.is_active
+                    <td className="px-4 py-3 text-center">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide border ${user.is_active
                         ? 'bg-green-500/10 text-green-600 border-green-500/20'
                         : 'bg-red-500/10 text-red-600 border-red-500/20'
                         }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                        <span className={`size-1.5 rounded-full ${user.is_active ? 'bg-green-500' : 'bg-red-500'}`}></span>
                         {user.is_active ? 'Active' : 'Disabled'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleOpenEdit(user)}
-                          className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-500/20 transition-all"
+                          className="size-7 flex items-center justify-center rounded bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-500/20 transition-all"
                           title="Edit"
                         >
-                          <span className="material-symbols-outlined text-[16px]">edit</span>
+                          <span className="material-symbols-outlined text-[14px]">edit</span>
                         </button>
                         <button
                           onClick={() => handleDelete(user.user_id)}
-                          className="p-1.5 rounded-lg bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-500/20 transition-all"
+                          className="size-7 flex items-center justify-center rounded bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-500/20 transition-all"
                           title="Delete"
                         >
-                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                          <span className="material-symbols-outlined text-[14px]">delete</span>
                         </button>
                       </div>
                     </td>

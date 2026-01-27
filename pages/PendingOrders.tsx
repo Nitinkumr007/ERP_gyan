@@ -262,14 +262,14 @@ const PendingOrders: React.FC<PendingOrdersProps> = ({ onNavigate }) => {
         <div className="flex items-center gap-2 text-[var(--color-primary)] text-sm font-bold uppercase tracking-widest">
           <span className="h-px w-8 bg-[var(--color-primary)]"></span> Logistics Hub
         </div>
-        <div className="flex justify-between items-end">
-          <h1 className="text-[var(--text-primary)] text-4xl font-black leading-tight tracking-tight">Pending Orders</h1>
-          <div className="flex gap-2">
-            <button onClick={fetchPendingOrders} className="flex items-center justify-center rounded-lg h-10 px-4 bg-[var(--bg-panel)] hover:bg-[var(--bg-secondary)] text-[var(--text-primary)] text-xs font-bold border border-[var(--border-color)] transition-colors shadow-sm">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <h1 className="text-[var(--text-primary)] text-3xl md:text-4xl font-black leading-tight tracking-tight">Pending Orders</h1>
+          <div className="flex gap-2 w-full md:w-auto">
+            <button onClick={fetchPendingOrders} className="flex-1 md:flex-none flex items-center justify-center rounded-lg h-10 px-4 bg-[var(--bg-panel)] hover:bg-[var(--bg-secondary)] text-[var(--text-primary)] text-xs font-bold border border-[var(--border-color)] transition-colors shadow-sm">
               <span className="material-symbols-outlined mr-2 text-[18px]">refresh</span>
               Refresh
             </button>
-            <button onClick={() => onNavigate('ADD_DEMAND')} className="flex items-center justify-center rounded-lg h-10 px-6 bg-[var(--color-primary)] text-white text-xs font-bold transition-all hover:opacity-90 shadow-lg hover:shadow-blue-500/20">
+            <button onClick={() => onNavigate('ADD_DEMAND')} className="flex-1 md:flex-none flex items-center justify-center rounded-lg h-10 px-6 bg-[var(--color-primary)] text-white text-xs font-bold transition-all hover:opacity-90 shadow-lg hover:shadow-blue-500/20">
               <span className="material-symbols-outlined mr-2 text-[20px]">add</span>
               Create Demand
             </button>
@@ -278,34 +278,34 @@ const PendingOrders: React.FC<PendingOrdersProps> = ({ onNavigate }) => {
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-[var(--bg-panel)] p-4 rounded-2xl border border-[var(--border-color)] shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-[var(--bg-panel)] p-4 rounded-2xl border border-[var(--border-color)] shadow-sm">
         <input
           placeholder="Search Order ID..."
           value={filters.order_id}
           onChange={e => setFilters(prev => ({ ...prev, order_id: e.target.value }))}
-          className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none"
+          className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none w-full"
         />
         <input
           placeholder="Search Distributor..."
           value={filters.db_name}
           onChange={e => setFilters(prev => ({ ...prev, db_name: e.target.value }))}
-          className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none"
+          className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none w-full"
         />
         <input
           type="date"
           value={filters.demand_date}
           onChange={e => setFilters(prev => ({ ...prev, demand_date: e.target.value }))}
-          className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none"
+          className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none w-full"
         />
         <input
           placeholder="Filter Status..."
           value={filters.status}
           onChange={e => setFilters(prev => ({ ...prev, status: e.target.value }))}
-          className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none"
+          className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none w-full"
         />
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {loading ? (
           <div className="text-center py-12 text-[var(--text-muted)]">Loading orders...</div>
         ) : filteredGroups.length === 0 ? (
@@ -316,99 +316,100 @@ const PendingOrders: React.FC<PendingOrdersProps> = ({ onNavigate }) => {
               {/* Group Header */}
               <div
                 onClick={() => setExpandedOrderId(expandedOrderId === group.order_id ? null : group.order_id)}
-                className={`grid grid-cols-1 md:grid-cols-12 gap-4 px-6 py-4 items-center cursor-pointer transition-colors ${expandedOrderId === group.order_id ? 'bg-[var(--bg-secondary)]' : 'hover:bg-[var(--bg-secondary)]'}`}
+                className={`flex flex-wrap md:flex-nowrap items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${expandedOrderId === group.order_id ? 'bg-[var(--bg-secondary)]' : 'hover:bg-[var(--bg-secondary)]'}`}
               >
-                <div className="md:col-span-2 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[var(--text-muted)]">{expandedOrderId === group.order_id ? 'expand_less' : 'expand_more'}</span>
-                  <span className="font-bold text-[var(--text-primary)] text-lg">#{group.order_id}</span>
+                <div className="flex items-center gap-2 min-w-[120px]">
+                  <span className="material-symbols-outlined text-[var(--text-muted)] text-[20px]">{expandedOrderId === group.order_id ? 'expand_less' : 'expand_more'}</span>
+                  <span className="font-bold text-[var(--text-primary)] text-base">#{group.order_id}</span>
                 </div>
-                <div className="md:col-span-4 font-medium text-[var(--text-primary)]">
+                <div className="flex-1 font-medium text-[var(--text-primary)] text-sm">
                   {group.db_name}
-                  <div className="text-xs text-[var(--text-secondary)]">{group.locations.length} Locations</div>
+                  <span className="ml-2 text-xs text-[var(--text-secondary)] px-2 py-0.5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-color)]">{group.locations.length} Locations</span>
                 </div>
-                <div className="md:col-span-2 text-sm text-[var(--text-secondary)]">{group.demand_date}</div>
-                <div className="md:col-span-2 text-sm font-bold text-[var(--text-primary)]">{group.total_mt.toFixed(3)} MT</div>
-                <div className="md:col-span-2 flex justify-end items-center gap-2">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${group.status === 'Completed' ? 'bg-green-500/10 text-green-600 border-green-500/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'}`}>
+                <div className="text-xs text-[var(--text-secondary)] w-24 text-right hidden md:block">{group.demand_date}</div>
+                <div className="text-sm font-bold text-[var(--text-primary)] w-24 text-right">{group.total_mt.toFixed(3)} MT</div>
+                <div className="flex items-center gap-3 w-auto lg:w-40 justify-end">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${group.status === 'Completed' ? 'bg-green-500/10 text-green-600 border-green-500/20' : 'bg-amber-500/10 text-amber-600 border-amber-500/20'}`}>
                     {group.status}
                   </span>
                   <button
                     onClick={(e) => { e.stopPropagation(); deleteOrder(group.order_id); }}
-                    className="p-1.5 text-red-500/70 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="size-7 flex items-center justify-center text-red-500/70 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                     title="Delete Entire Order"
                   >
-                    <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+                    <span className="material-symbols-outlined text-[18px]">delete_forever</span>
                   </button>
                 </div>
               </div>
 
               {/* Expanded Children */}
               {expandedOrderId === group.order_id && (
-                <div className="border-t border-[var(--border-color)] bg-[var(--bg-secondary)]/30 p-4 space-y-4">
+                <div className="border-t border-[var(--border-color)] bg-[var(--bg-secondary)]/30 p-4 space-y-3">
                   {group.locations.map(location => {
                     const currentData = editingData[location.demand_id] || location;
                     const isEditing = !!editingData[location.demand_id];
 
                     return (
-                      <div key={location.demand_id} className="bg-[var(--bg-primary)] rounded-lg border border-[var(--border-color)] p-5 animate-fadeIn">
-                        <div className="flex justify-between items-start mb-4 border-b border-[var(--border-color)] pb-3">
-                          <div>
-                            <h3 className="font-bold text-[var(--text-primary)] text-base">{location.location || 'Location Not Specified'}</h3>
-                            <span className="text-xs text-[var(--text-secondary)]">Plant: {location.plant_name || 'Global'}</span>
+                      <div key={location.demand_id} className="bg-[var(--bg-primary)] rounded-lg border border-[var(--border-color)] p-3 animate-fadeIn shadow-sm">
+                        <div className="flex justify-between items-start mb-3 border-b border-[var(--border-color)] pb-2">
+                          <div className="flex items-baseline gap-2">
+                            <h3 className="font-bold text-[var(--text-primary)] text-sm">{location.location || 'Location Not Specified'}</h3>
+                            <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--bg-secondary)]">{location.plant_name || 'Global'}</span>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-1.5">
                             {/* Action Buttons */}
                             <button
                               onClick={() => saveLocation(location.demand_id)}
-                              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isEditing ? 'bg-green-600 text-white shadow-lg shadow-green-500/30' : 'bg-[var(--bg-panel)] text-[var(--text-secondary)] opacity-50 cursor-not-allowed'}`}
+                              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold transition-all uppercase tracking-wide ${isEditing ? 'bg-green-600 text-white shadow-lg shadow-green-500/30' : 'bg-[var(--bg-panel)] text-[var(--text-secondary)] opacity-50 cursor-not-allowed border border-[var(--border-color)]'}`}
                               disabled={!isEditing}
                             >
-                              <span className="material-symbols-outlined text-[16px]">save</span>
+                              <span className="material-symbols-outlined text-[14px]">save</span>
                               Save
                             </button>
                             <button
                               onClick={() => updateStatus(location.demand_id, 'Dispatched')}
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--color-primary)] text-white text-xs font-bold hover:opacity-90 shadow-lg shadow-blue-500/20"
+                              className="flex items-center gap-1 px-2 py-1 rounded bg-[var(--color-primary)] text-white text-[10px] font-bold hover:opacity-90 shadow-lg shadow-blue-500/20 uppercase tracking-wide"
                             >
-                              <span className="material-symbols-outlined text-[16px]">local_shipping</span>
+                              <span className="material-symbols-outlined text-[14px]">local_shipping</span>
                               Dispatch
                             </button>
                             <button
                               onClick={() => deleteLocation(location.demand_id)}
-                              className="p-1.5 text-red-500/70 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="size-6 flex items-center justify-center text-red-500/70 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                               title="Delete Location"
                             >
-                              <span className="material-symbols-outlined text-[18px]">delete</span>
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
                             </button>
                           </div>
                         </div>
 
                         {/* Logistics Fields */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                           <div>
-                            <label className="block text-[10px] uppercase font-bold text-[var(--text-secondary)] mb-1">Vehicle No</label>
+                            <label className="block text-[9px] uppercase font-bold text-[var(--text-secondary)] mb-0.5">Vehicle No</label>
                             <input
                               value={currentData.vehicle_number || ''}
                               onChange={(e) => handleEditChange(location.demand_id, 'vehicle_number', e.target.value)}
-                              className="w-full bg-[var(--bg-panel)] border border-[var(--border-color)] rounded px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none font-mono"
-                              placeholder="Enter Vehicle No"
+                              className="w-full bg-[var(--bg-panel)] border border-[var(--border-color)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none font-mono"
+                              placeholder="Vehicle No"
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] uppercase font-bold text-[var(--text-secondary)] mb-1">Transporter</label>
+                            <label className="block text-[9px] uppercase font-bold text-[var(--text-secondary)] mb-0.5">Transporter</label>
                             <input
                               value={currentData.transporter_name || ''}
                               onChange={(e) => handleEditChange(location.demand_id, 'transporter_name', e.target.value)}
-                              className="w-full bg-[var(--bg-panel)] border border-[var(--border-color)] rounded px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none"
+                              className="w-full bg-[var(--bg-panel)] border border-[var(--border-color)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none"
                               placeholder="Transporter Name"
                             />
                           </div>
+
                           <div>
-                            <label className="block text-[10px] uppercase font-bold text-[var(--text-secondary)] mb-1">Priority</label>
+                            <label className="block text-[9px] uppercase font-bold text-[var(--text-secondary)] mb-0.5">Priority</label>
                             <select
                               value={currentData.dispatch_priority || 'Normal'}
                               onChange={(e) => handleEditChange(location.demand_id, 'dispatch_priority', e.target.value)}
-                              className="w-full bg-[var(--bg-panel)] border border-[var(--border-color)] rounded px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none"
+                              className="w-full bg-[var(--bg-panel)] border border-[var(--border-color)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none h-[30px]"
                             >
                               <option>Normal</option>
                               <option>High</option>
@@ -418,23 +419,26 @@ const PendingOrders: React.FC<PendingOrdersProps> = ({ onNavigate }) => {
                         </div>
 
                         {/* Products Grid */}
-                        <div className="bg-[var(--bg-panel)]/50 rounded-lg p-4 border border-[var(--border-color)]">
-                          <div className="flex justify-between items-center mb-3">
-                            <h4 className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider">Product Quantities</h4>
-                            <span className="text-sm font-black text-[var(--text-primary)]">Total: {currentData.total_in_mt?.toFixed(3)} MT</span>
+                        <div className="bg-[var(--bg-panel)]/50 rounded-lg p-3 border border-[var(--border-color)]">
+                          <div className="flex justify-between items-center mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-[16px] text-[var(--text-muted)]">inventory_2</span>
+                              <h4 className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">Product Manifest</h4>
+                            </div>
+                            <span className="text-xs font-black text-[var(--text-primary)] font-mono bg-[var(--bg-secondary)] px-2 py-0.5 rounded border border-[var(--border-color)]">Total: {currentData.total_in_mt?.toFixed(3)} MT</span>
                           </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
                             {PRODUCTS.map(prod => (
-                              <div key={prod.key} className="relative">
-                                <label className="block text-[10px] text-[var(--text-secondary)] mb-1 truncate" title={prod.label}>{prod.label}</label>
+                              <div key={prod.key} className="relative group">
                                 <input
                                   type="number"
                                   min="0"
                                   value={currentData[prod.key] as number || ''}
                                   onChange={(e) => handleEditChange(location.demand_id, prod.key, parseFloat(e.target.value) || 0)}
-                                  className={`w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none ${currentData[prod.key] ? 'border-blue-500/30 bg-blue-500/5' : ''}`}
-                                  placeholder="0"
+                                  className={`w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded px-1.5 py-1 text-[11px] font-mono text-center text-[var(--text-primary)] focus:border-[var(--color-primary)] outline-none transition-colors ${currentData[prod.key] ? 'border-blue-500/30 bg-blue-500/5 font-bold' : 'text-[var(--text-muted)] focus:text-[var(--text-primary)]'}`}
+                                  placeholder="-"
                                 />
+                                <label className="block text-[9px] text-[var(--text-secondary)] mt-0.5 truncate text-center group-hover:text-[var(--color-primary)] transition-colors cursor-help" title={prod.label}>{prod.label.split(' ').slice(0, 2).join(' ')}</label>
                               </div>
                             ))}
                           </div>

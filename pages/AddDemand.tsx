@@ -275,8 +275,10 @@ const AddDemand: React.FC<AddDemandProps> = ({ onNavigate }) => {
                                 className="p-4 hover:bg-[var(--bg-secondary)] cursor-pointer transition-colors flex justify-between items-center"
                             >
                                 <div>
-                                    <div className="font-bold text-[var(--text-primary)]">{dist['NAME OF DISTRIBUTOR']}</div>
-                                    <div className="text-xs text-[var(--text-secondary)]">Code: {dist['DB ID']} | District: {dist['DISTRICT']}</div>
+                                    <div className="font-bold text-[var(--text-primary)] text-lg">{dist['DB Name']}</div>
+                                    <div className="text-xs text-[var(--text-secondary)] font-medium mt-0.5">
+                                        {dist['NAME OF DISTRIBUTOR']} <span className="opacity-50">|</span> Code: {dist['DB ID']} <span className="opacity-50">|</span> {dist['DISTRICT']}
+                                    </div>
                                 </div>
                                 <span className="material-symbols-outlined text-[var(--text-muted)]">chevron_right</span>
                             </div>
